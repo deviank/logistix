@@ -65,7 +65,12 @@
                                     </div>
                                 </div>
                                 <div class="company-actions">
-                                    <button class="btn btn-sm btn-primary" onclick="editCompany(<?php echo $company['id']; ?>)">Edit</button>
+                                    <?php if ($company['status'] === 'active'): ?>
+                                        <button class="btn btn-sm btn-primary" onclick="createLoadSheetForCompany(<?php echo $company['id']; ?>, '<?php echo htmlspecialchars($company['name']); ?>', <?php echo $company['rate_per_pallet']; ?>, <?php echo $company['payment_terms']; ?>)">
+                                            New Load Sheet
+                                        </button>
+                                    <?php endif; ?>
+                                    <button class="btn btn-sm btn-info" onclick="editCompany(<?php echo $company['id']; ?>)">Edit</button>
                                     <button class="btn btn-sm btn-secondary" onclick="viewCompanyDetails(<?php echo $company['id']; ?>)">Details</button>
                                     <?php if ($company['status'] === 'active'): ?>
                                         <button class="btn btn-sm btn-warning" onclick="deactivateCompany(<?php echo $company['id']; ?>)">Deactivate</button>
@@ -134,6 +139,93 @@
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeCompanyModal()">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save Company</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Load Sheet Modal (for quick creation from company) -->
+    <div id="loadsheet-modal" class="modal" style="display: none;">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3 id="loadsheet-modal-title">New Load Sheet</h3>
+                <button class="close-btn" onclick="closeLoadSheetModal()">&times;</button>
+            </div>
+            <form id="loadsheet-form">
+                <input type="hidden" id="loadsheet-id" name="loadsheet_id">
+                <input type="hidden" id="loadsheet-company-id" name="company_id">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="loadsheet-company">Company *</label>
+                        <input type="text" id="loadsheet-company" name="company_name" readonly style="background: #f8f9fa; color: #666;">
+                    </div>
+                    <div class="form-group">
+                        <label for="loadsheet-date">Date *</label>
+                        <input type="date" id="loadsheet-date" name="date" value="<?php echo date('Y-m-d'); ?>" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="pallet-quantity">Pallet Quantity *</label>
+                        <input type="number" id="pallet-quantity" name="pallet_quantity" min="1" required onchange="calculateTotal()">
+                    </div>
+                    <div class="form-group">
+                        <label for="rate-per-pallet">Rate per Pallet (R) *</label>
+                        <input type="number" id="rate-per-pallet" name="rate_per_pallet" step="0.01" required onchange="calculateTotal()">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="cargo-description">Cargo Description</label>
+                    <textarea id="cargo-description" name="cargo_description" rows="3" placeholder="Describe the cargo being transported"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="delivery-method">Delivery Method *</label>
+                        <select id="delivery-method" name="delivery_method" required onchange="toggleContractorFields()">
+                            <option value="">Select Method</option>
+                            <option value="own_driver">Own Driver</option>
+                            <option value="contractor">Contractor</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="contractor-cost-group" style="display: none;">
+                        <label for="contractor-cost">Contractor Cost (R)</label>
+                        <input type="number" id="contractor-cost" name="contractor_cost" step="0.01" onchange="calculateProfit()">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="loadsheet-status">Status</label>
+                    <select id="loadsheet-status" name="status">
+                        <option value="pending">Pending</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+
+                <!-- Calculation Summary -->
+                <div class="calculation-summary">
+                    <h4>Financial Summary</h4>
+                    <div class="calc-row">
+                        <span>Subtotal:</span>
+                        <span id="calc-subtotal">R 0.00</span>
+                    </div>
+                    <div class="calc-row">
+                        <span>Contractor Cost:</span>
+                        <span id="calc-contractor-cost">R 0.00</span>
+                    </div>
+                    <div class="calc-row total">
+                        <span>Net Profit:</span>
+                        <span id="calc-profit">R 0.00</span>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeLoadSheetModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Load Sheet</button>
                 </div>
             </form>
         </div>

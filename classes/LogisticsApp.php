@@ -74,6 +74,12 @@ class LogisticsApp {
             case 'create_sample_data':
                 $this->createSampleData();
                 break;
+            case 'create_loadsheet':
+                $this->createLoadSheet();
+                break;
+            case 'save_company':
+                $this->saveCompany();
+                break;
             default:
                 http_response_code(404);
                 echo json_encode(['error' => 'Action not found']);
@@ -288,6 +294,98 @@ class LogisticsApp {
         }
         
         return 'INV' . $year . $month . str_pad($newNumber, 3, '0', STR_PAD_LEFT);
+    }
+    
+    public function createLoadSheet() {
+        $companyId = $_POST['company_id'] ?? 0;
+        $palletQuantity = $_POST['pallet_quantity'] ?? 0;
+        $ratePerPallet = $_POST['rate_per_pallet'] ?? 0;
+        $cargoDescription = $_POST['cargo_description'] ?? '';
+        $deliveryMethod = $_POST['delivery_method'] ?? '';
+        $contractorCost = $_POST['contractor_cost'] ?? 0;
+        $status = $_POST['status'] ?? 'pending';
+        $date = $_POST['date'] ?? date('Y-m-d');
+        
+        if (!$companyId || !$palletQuantity || !$ratePerPallet || !$deliveryMethod) {
+            echo json_encode(['success' => false, 'message' => 'Required fields missing']);
+            return;
+        }
+        
+        // Calculate final rate
+        $finalRate = $palletQuantity * $ratePerPallet;
+        
+        // Create load sheet data
+        $loadSheetData = [
+            'company_id' => $companyId,
+            'pallet_quantity' => $palletQuantity,
+            'cargo_description' => $cargoDescription,
+            'rate_per_pallet' => $ratePerPallet,
+            'final_rate' => $finalRate,
+            'delivery_method' => $deliveryMethod,
+            'contractor_cost' => $contractorCost,
+            'status' => $status,
+            'date' => $date,
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+        
+        $loadSheetId = $this->db->insert('load_sheets', $loadSheetData);
+        
+        if ($loadSheetId) {
+            echo json_encode([
+                'success' => true,
+                'loadsheet_id' => $loadSheetId,
+                'message' => 'Load sheet created successfully'
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to create load sheet']);
+        }
+    }
+    
+    public function saveCompany() {
+        $companyId = $_POST['company_id'] ?? 0;
+        $name = $_POST['name'] ?? '';
+        $contactPerson = $_POST['contact_person'] ?? '';
+        $email = $_POST['email'] ?? '';
+        $phone = $_POST['phone'] ?? '';
+        $address = $_POST['address'] ?? '';
+        $ratePerPallet = $_POST['rate_per_pallet'] ?? 0;
+        $paymentTerms = $_POST['payment_terms'] ?? 30;
+        $status = $_POST['status'] ?? 'active';
+        
+        if (!$name || !$contactPerson || !$email || !$phone || !$ratePerPallet) {
+            echo json_encode(['success' => false, 'message' => 'Required fields missing']);
+            return;
+        }
+        
+        $companyData = [
+            'name' => $name,
+            'contact_person' => $contactPerson,
+            'email' => $email,
+            'phone' => $phone,
+            'address' => $address,
+            'rate_per_pallet' => $ratePerPallet,
+            'payment_terms' => $paymentTerms,
+            'status' => $status,
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+        
+        if ($companyId) {
+            // Update existing company
+            $updated = $this->db->update('companies', $companyData, 'id = ?', [$companyId]);
+            if ($updated) {
+                echo json_encode(['success' => true, 'message' => 'Company updated successfully']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to update company']);
+            }
+        } else {
+            // Create new company
+            $companyId = $this->db->insert('companies', $companyData);
+            if ($companyId) {
+                echo json_encode(['success' => true, 'message' => 'Company created successfully']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to create company']);
+            }
+        }
     }
 }
 ?>

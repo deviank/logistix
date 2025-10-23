@@ -34,6 +34,18 @@ function initializeEventListeners() {
             markInvoicePaid(invoiceId);
         });
     });
+    
+    // Load sheet form submission
+    const loadSheetForm = document.getElementById('loadsheet-form');
+    if (loadSheetForm) {
+        loadSheetForm.addEventListener('submit', handleLoadSheetSubmit);
+    }
+    
+    // Company form submission
+    const companyForm = document.getElementById('company-form');
+    if (companyForm) {
+        companyForm.addEventListener('submit', handleCompanySubmit);
+    }
 }
 
 function createInvoice(loadSheetId) {
@@ -208,6 +220,212 @@ function createSampleData() {
     }
     
     showNotification('Sample data already exists in the database!', 'info');
+}
+
+// Company Management Functions
+function showAddCompanyForm() {
+    const modal = document.getElementById('company-modal');
+    const form = document.getElementById('company-form');
+    const title = document.getElementById('modal-title');
+    
+    // Reset form
+    form.reset();
+    document.getElementById('company-id').value = '';
+    title.textContent = 'Add New Company';
+    
+    modal.style.display = 'flex';
+}
+
+function editCompany(companyId) {
+    // This would load company data and show edit form
+    showNotification('Edit company functionality coming soon!', 'info');
+}
+
+function viewCompanyDetails(companyId) {
+    // This would show company details
+    showNotification('Company details functionality coming soon!', 'info');
+}
+
+function activateCompany(companyId) {
+    if (!confirm('Are you sure you want to activate this company?')) {
+        return;
+    }
+    showNotification('Company activation functionality coming soon!', 'info');
+}
+
+function deactivateCompany(companyId) {
+    if (!confirm('Are you sure you want to deactivate this company?')) {
+        return;
+    }
+    showNotification('Company deactivation functionality coming soon!', 'info');
+}
+
+function closeCompanyModal() {
+    document.getElementById('company-modal').style.display = 'none';
+}
+
+// Load Sheet Functions
+function createLoadSheetForCompany(companyId, companyName, ratePerPallet, paymentTerms) {
+    const modal = document.getElementById('loadsheet-modal');
+    const form = document.getElementById('loadsheet-form');
+    
+    // Reset form
+    form.reset();
+    document.getElementById('loadsheet-id').value = '';
+    
+    // Pre-populate company data
+    document.getElementById('loadsheet-company-id').value = companyId;
+    document.getElementById('loadsheet-company').value = companyName;
+    document.getElementById('rate-per-pallet').value = ratePerPallet;
+    document.getElementById('loadsheet-date').value = new Date().toISOString().split('T')[0];
+    
+    // Update modal title
+    document.getElementById('loadsheet-modal-title').textContent = `New Load Sheet - ${companyName}`;
+    
+    // Show modal
+    modal.style.display = 'flex';
+    
+    // Focus on first input
+    setTimeout(() => {
+        document.getElementById('pallet-quantity').focus();
+    }, 100);
+}
+
+function closeLoadSheetModal() {
+    document.getElementById('loadsheet-modal').style.display = 'none';
+}
+
+function calculateTotal() {
+    const quantity = parseFloat(document.getElementById('pallet-quantity').value) || 0;
+    const rate = parseFloat(document.getElementById('rate-per-pallet').value) || 0;
+    const subtotal = quantity * rate;
+    
+    document.getElementById('calc-subtotal').textContent = `R ${subtotal.toFixed(2)}`;
+    calculateProfit();
+}
+
+function calculateProfit() {
+    const subtotal = parseFloat(document.getElementById('calc-subtotal').textContent.replace('R ', '')) || 0;
+    const contractorCost = parseFloat(document.getElementById('contractor-cost').value) || 0;
+    const profit = subtotal - contractorCost;
+    
+    document.getElementById('calc-contractor-cost').textContent = `R ${contractorCost.toFixed(2)}`;
+    document.getElementById('calc-profit').textContent = `R ${profit.toFixed(2)}`;
+}
+
+function toggleContractorFields() {
+    const deliveryMethod = document.getElementById('delivery-method').value;
+    const contractorGroup = document.getElementById('contractor-cost-group');
+    
+    if (deliveryMethod === 'contractor') {
+        contractorGroup.style.display = 'block';
+    } else {
+        contractorGroup.style.display = 'none';
+        document.getElementById('contractor-cost').value = '';
+        calculateProfit();
+    }
+}
+
+function handleLoadSheetSubmit(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalText = submitButton.textContent;
+    
+    submitButton.disabled = true;
+    submitButton.textContent = 'Saving...';
+    
+    // Convert FormData to URL-encoded string
+    const data = new URLSearchParams();
+    for (let [key, value] of formData.entries()) {
+        data.append(key, value);
+    }
+    data.append('action', 'create_loadsheet');
+    
+    console.log('Creating load sheet:', Object.fromEntries(data));
+    
+    fetch('?page=ajax', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: data.toString()
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Load sheet creation response:', data);
+        
+        if (data.success) {
+            showNotification('Load sheet created successfully!', 'success');
+            closeLoadSheetModal();
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showNotification('Error creating load sheet: ' + data.message, 'error');
+            submitButton.disabled = false;
+            submitButton.textContent = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error creating load sheet:', error);
+        showNotification('Error creating load sheet. Please try again.', 'error');
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
+    });
+}
+
+function handleCompanySubmit(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalText = submitButton.textContent;
+    
+    submitButton.disabled = true;
+    submitButton.textContent = 'Saving...';
+    
+    // Convert FormData to URL-encoded string
+    const data = new URLSearchParams();
+    for (let [key, value] of formData.entries()) {
+        data.append(key, value);
+    }
+    data.append('action', 'save_company');
+    
+    console.log('Saving company:', Object.fromEntries(data));
+    
+    fetch('?page=ajax', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: data.toString()
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Company save response:', data);
+        
+        if (data.success) {
+            showNotification('Company saved successfully!', 'success');
+            closeCompanyModal();
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showNotification('Error saving company: ' + data.message, 'error');
+            submitButton.disabled = false;
+            submitButton.textContent = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error saving company:', error);
+        showNotification('Error saving company. Please try again.', 'error');
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
+    });
 }
 
 function refreshStats() {
