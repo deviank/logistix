@@ -191,6 +191,17 @@
                             <option value="contractor">Contractor</option>
                         </select>
                     </div>
+                    <div class="form-group" id="contractor-select-group" style="display: none;">
+                        <label for="contractor-select">Contractor *</label>
+                        <div style="display: flex; gap: 8px; align-items: flex-end;">
+                            <select id="contractor-select" name="contractor_id" style="flex: 1;" onchange="handleContractorSelection()">
+                                <option value="">Select Contractor</option>
+                            </select>
+                            <button type="button" class="btn btn-sm" onclick="showAddContractorModal()" style="white-space: nowrap; padding: 8px 12px; height: fit-content;">+ Add New</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group" id="contractor-cost-group" style="display: none;">
                         <label for="contractor-cost">Contractor Cost (R)</label>
                         <input type="number" id="contractor-cost" name="contractor_cost" step="0.01" onchange="calculateProfit()">
@@ -226,6 +237,40 @@
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeLoadSheetModal()">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save Load Sheet</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add New Contractor Modal -->
+    <div id="contractor-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Contractor</h3>
+                <button class="close-btn" onclick="closeContractorModal()">&times;</button>
+            </div>
+            <form id="contractor-form">
+                <div class="form-group">
+                    <label for="contractor-name">Contractor Name *</label>
+                    <input type="text" id="contractor-name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="contractor-contact">Contact Person</label>
+                    <input type="text" id="contractor-contact" name="contact_person">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="contractor-phone">Phone</label>
+                        <input type="text" id="contractor-phone" name="phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="contractor-email">Email</label>
+                        <input type="email" id="contractor-email" name="email">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeContractorModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Contractor</button>
                 </div>
             </form>
         </div>

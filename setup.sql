@@ -95,11 +95,34 @@ CREATE TABLE statement_items (
     FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
 );
 
+-- Contractors table
+CREATE TABLE contractors (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    contact_person VARCHAR(255),
+    phone VARCHAR(50),
+    email VARCHAR(255),
+    status ENUM('active', 'inactive') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- Insert sample data
 INSERT INTO companies (name, contact_person, email, phone, billing_address, vat_number, payment_terms, rate_per_pallet) VALUES
 ('Spar Distribution', 'John Smith', 'john@spar.co.za', '011-123-4567', '123 Main Street, Johannesburg, 2000', 'VAT123456789', 30, 450.00),
 ('Pick n Pay Supply', 'Sarah Johnson', 'sarah@picknpay.co.za', '011-234-5678', '456 Oak Avenue, Cape Town, 8000', 'VAT987654321', 30, 520.00),
 ('Woolworths Logistics', 'Mike Brown', 'mike@woolworths.co.za', '011-345-6789', '789 Pine Road, Durban, 4000', 'VAT456789123', 30, 480.00);
+
+-- Insert sample contractors
+INSERT INTO contractors (name, contact_person, phone, email, status) VALUES
+('Around The Clock Transport', 'Mike Johnson', '011-555-0101', 'mike@aroundtheclock.co.za', 'active'),
+('Rapid Delivery Services', 'Sarah Martinez', '011-555-0202', 'sarah@rapiddelivery.co.za', 'active'),
+('Cross Country Logistics', 'Tom Anderson', '011-555-0303', 'tom@crosscountry.co.za', 'active'),
+('Premier Freight Solutions', 'Jennifer Brown', '011-555-0404', 'jennifer@premierfreight.co.za', 'active'),
+('Express Cargo Movers', 'Robert Wilson', '011-555-0505', 'robert@expresscargo.co.za', 'active'),
+('Safe & Sound Transport', 'Linda Davis', '011-555-0606', 'linda@safesound.co.za', 'active'),
+('Mile High Logistics', 'James Miller', '011-555-0707', 'james@milehigh.co.za', 'active'),
+('Reliable Routes Transport', 'Patricia Garcia', '011-555-0808', 'patricia@reliableroutes.co.za', 'active');
 
 -- Insert sample load sheets
 INSERT INTO load_sheets (company_id, pickup_location, delivery_location, cargo_description, special_instructions, pallet_quantity, cargo_weight, delivery_method, contractor_name, contractor_cost, rate_per_pallet, final_rate, requested_date, status) VALUES

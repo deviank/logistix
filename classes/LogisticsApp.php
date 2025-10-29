@@ -80,6 +80,12 @@ class LogisticsApp {
             case 'save_company':
                 $this->saveCompany();
                 break;
+            case 'get_contractors':
+                $this->getContractors();
+                break;
+            case 'create_contractor':
+                $this->createContractor();
+                break;
             default:
                 http_response_code(404);
                 echo json_encode(['error' => 'Action not found']);
@@ -302,6 +308,7 @@ class LogisticsApp {
         $ratePerPallet = $_POST['rate_per_pallet'] ?? 0;
         $cargoDescription = $_POST['cargo_description'] ?? '';
         $deliveryMethod = $_POST['delivery_method'] ?? '';
+        $contractorId = $_POST['contractor_id'] ?? null;
         $contractorCost = $_POST['contractor_cost'] ?? 0;
         $status = $_POST['status'] ?? 'pending';
         $date = $_POST['date'] ?? date('Y-m-d');
@@ -310,6 +317,18 @@ class LogisticsApp {
             echo json_encode(['success' => false, 'message' => 'Required fields missing']);
             return;
         }
+        
+        // Get contractor name if contractor is selected
+        $contractorName = null;
+        if ($contractorId) {
+            $contractor = $this->db->fetchOne("SELECT * FROM contractors WHERE id = ?", [$contractorId]);
+            if ($contractor) {
+                $contractorName = $contractor['name'];
+            }
+        }
+        
+        // Convert delivery method format (own_driver -> own, contractor -> contractor)
+        $deliveryMethodValue = ($deliveryMethod === 'own_driver') ? 'own' : 'contractor';
         
         // Calculate final rate
         $finalRate = $palletQuantity * $ratePerPallet;
@@ -321,7 +340,8 @@ class LogisticsApp {
             'cargo_description' => $cargoDescription,
             'rate_per_pallet' => $ratePerPallet,
             'final_rate' => $finalRate,
-            'delivery_method' => $deliveryMethod,
+            'delivery_method' => $deliveryMethodValue,
+            'contractor_name' => $contractorName,
             'contractor_cost' => $contractorCost,
             'status' => $status,
             'date' => $date,
@@ -338,6 +358,45 @@ class LogisticsApp {
             ]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Failed to create load sheet']);
+        }
+    }
+    
+    public function getContractors() {
+        $contractors = $this->db->fetchAll("SELECT * FROM contractors WHERE status = 'active' ORDER BY name");
+        echo json_encode(['success' => true, 'contractors' => $contractors]);
+    }
+    
+    public function createContractor() {
+        $name = $_POST['name'] ?? '';
+        $contactPerson = $_POST['contact_person'] ?? '';
+        $phone = $_POST['phone'] ?? '';
+        $email = $_POST['email'] ?? '';
+        
+        if (!$name) {
+            echo json_encode(['success' => false, 'message' => 'Contractor name is required']);
+            return;
+        }
+        
+        $contractorData = [
+            'name' => $name,
+            'contact_person' => $contactPerson,
+            'phone' => $phone,
+            'email' => $email,
+            'status' => 'active',
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+        
+        $contractorId = $this->db->insert('contractors', $contractorData);
+        
+        if ($contractorId) {
+            $contractor = $this->db->fetchOne("SELECT * FROM contractors WHERE id = ?", [$contractorId]);
+            echo json_encode([
+                'success' => true,
+                'contractor' => $contractor,
+                'message' => 'Contractor created successfully'
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to create contractor']);
         }
     }
     

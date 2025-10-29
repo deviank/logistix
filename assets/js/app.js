@@ -14,6 +14,9 @@ function initializeApp() {
     // Initialize event listeners
     initializeEventListeners();
     
+    // Load contractors when app initializes
+    loadContractors();
+    
     // Auto-refresh stats every 5 minutes
     setInterval(refreshStats, 300000);
 }
@@ -45,6 +48,12 @@ function initializeEventListeners() {
     const companyForm = document.getElementById('company-form');
     if (companyForm) {
         companyForm.addEventListener('submit', handleCompanySubmit);
+    }
+    
+    // Contractor form submission
+    const contractorForm = document.getElementById('contractor-form');
+    if (contractorForm) {
+        contractorForm.addEventListener('submit', handleContractorSubmit);
     }
 }
 
@@ -273,6 +282,16 @@ function createLoadSheetForCompany(companyId, companyName, ratePerPallet, paymen
     form.reset();
     document.getElementById('loadsheet-id').value = '';
     
+    // Reset contractor fields
+    const contractorSelectGroup = document.getElementById('contractor-select-group');
+    const contractorCostGroup = document.getElementById('contractor-cost-group');
+    if (contractorSelectGroup) contractorSelectGroup.style.display = 'none';
+    if (contractorCostGroup) contractorCostGroup.style.display = 'none';
+    const contractorSelect = document.getElementById('contractor-select');
+    if (contractorSelect) contractorSelect.value = '';
+    const contractorCost = document.getElementById('contractor-cost');
+    if (contractorCost) contractorCost.value = '';
+    
     // Pre-populate company data
     document.getElementById('loadsheet-company-id').value = companyId;
     document.getElementById('loadsheet-company').value = companyName;
@@ -292,7 +311,14 @@ function createLoadSheetForCompany(companyId, companyName, ratePerPallet, paymen
 }
 
 function closeLoadSheetModal() {
-    document.getElementById('loadsheet-modal').style.display = 'none';
+    const modal = document.getElementById('loadsheet-modal');
+    if (modal) modal.style.display = 'none';
+    
+    // Reset contractor fields
+    const contractorSelectGroup = document.getElementById('contractor-select-group');
+    const contractorCostGroup = document.getElementById('contractor-cost-group');
+    if (contractorSelectGroup) contractorSelectGroup.style.display = 'none';
+    if (contractorCostGroup) contractorCostGroup.style.display = 'none';
 }
 
 function calculateTotal() {
@@ -315,12 +341,48 @@ function calculateProfit() {
 
 function toggleContractorFields() {
     const deliveryMethod = document.getElementById('delivery-method').value;
-    const contractorGroup = document.getElementById('contractor-cost-group');
+    const contractorSelectGroup = document.getElementById('contractor-select-group');
+    const contractorCostGroup = document.getElementById('contractor-cost-group');
+    const contractorSelect = document.getElementById('contractor-select');
     
     if (deliveryMethod === 'contractor') {
-        contractorGroup.style.display = 'block';
+        // Show the contractor dropdown group (will appear in grid layout next to delivery method)
+        if (contractorSelectGroup) {
+            contractorSelectGroup.style.display = 'block';
+        }
+        // Load contractors if not already loaded
+        if (contractorSelect && contractorSelect.options.length <= 2) {
+            loadContractors();
+        }
     } else {
-        contractorGroup.style.display = 'none';
+        // Hide contractor fields
+        if (contractorSelectGroup) {
+            contractorSelectGroup.style.display = 'none';
+        }
+        if (contractorCostGroup) {
+            contractorCostGroup.style.display = 'none';
+        }
+        if (contractorSelect) {
+            contractorSelect.value = '';
+        }
+        const contractorCost = document.getElementById('contractor-cost');
+        if (contractorCost) {
+            contractorCost.value = '';
+        }
+        calculateProfit();
+    }
+}
+
+function handleContractorSelection() {
+    const contractorSelect = document.getElementById('contractor-select');
+    const contractorCostGroup = document.getElementById('contractor-cost-group');
+    const contractorId = contractorSelect.value;
+    
+    if (contractorId && contractorId !== '') {
+        // Show cost field when contractor is selected
+        contractorCostGroup.style.display = 'block';
+    } else {
+        contractorCostGroup.style.display = 'none';
         document.getElementById('contractor-cost').value = '';
         calculateProfit();
     }
@@ -330,6 +392,18 @@ function handleLoadSheetSubmit(event) {
     event.preventDefault();
     
     const form = event.target;
+    const deliveryMethod = document.getElementById('delivery-method').value;
+    const contractorSelect = document.getElementById('contractor-select');
+    
+    // Validate contractor selection if delivery method is contractor
+    if (deliveryMethod === 'contractor') {
+        const contractorId = contractorSelect ? contractorSelect.value : '';
+        if (!contractorId || contractorId === '') {
+            showNotification('Please select a contractor', 'error');
+            return;
+        }
+    }
+    
     const formData = new FormData(form);
     const submitButton = form.querySelector('button[type="submit"]');
     const originalText = submitButton.textContent;
@@ -460,6 +534,131 @@ document.addEventListener('click', function(event) {
     }
 });
 
+// Contractor Management Functions
+function loadContractors() {
+    const contractorSelect = document.getElementById('contractor-select');
+    if (!contractorSelect) return;
+    
+    fetch('?page=ajax&action=get_contractors')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.contractors) {
+                populateContractorDropdown(data.contractors);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading contractors:', error);
+        });
+}
+
+function populateContractorDropdown(contractors) {
+    const contractorSelect = document.getElementById('contractor-select');
+    if (!contractorSelect) return;
+    
+    // Clear existing contractors
+    contractorSelect.innerHTML = '';
+    
+    // Add Select option
+    const selectOption = document.createElement('option');
+    selectOption.value = '';
+    selectOption.textContent = 'Select Contractor';
+    contractorSelect.appendChild(selectOption);
+    
+    // Add contractor options (only existing contractors)
+    contractors.forEach(contractor => {
+        const option = document.createElement('option');
+        option.value = contractor.id;
+        option.textContent = contractor.name;
+        contractorSelect.appendChild(option);
+    });
+}
+
+function showAddContractorModal() {
+    const modal = document.getElementById('contractor-modal');
+    const form = document.getElementById('contractor-form');
+    
+    if (!modal || !form) return;
+    
+    // Reset form
+    form.reset();
+    modal.style.display = 'flex';
+    
+    // Focus on first input
+    setTimeout(() => {
+        const nameInput = document.getElementById('contractor-name');
+        if (nameInput) nameInput.focus();
+    }, 100);
+}
+
+function closeContractorModal() {
+    const modal = document.getElementById('contractor-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function handleContractorSubmit(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalText = submitButton.textContent;
+    
+    submitButton.disabled = true;
+    submitButton.textContent = 'Adding...';
+    
+    // Convert FormData to URL-encoded string
+    const data = new URLSearchParams();
+    for (let [key, value] of formData.entries()) {
+        data.append(key, value);
+    }
+    data.append('action', 'create_contractor');
+    
+    console.log('Creating contractor:', Object.fromEntries(data));
+    
+    fetch('?page=ajax', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: data.toString()
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Contractor creation response:', data);
+        
+        if (data.success && data.contractor) {
+            showNotification('Contractor added successfully!', 'success');
+            
+            // Reload contractors to include new one
+            loadContractors();
+            
+            // Select the new contractor
+            const contractorSelect = document.getElementById('contractor-select');
+            if (contractorSelect) {
+                // Wait for dropdown to be populated
+                setTimeout(() => {
+                    contractorSelect.value = data.contractor.id;
+                    handleContractorSelection();
+                }, 200);
+            }
+            
+            closeContractorModal();
+        } else {
+            showNotification('Error adding contractor: ' + (data.message || 'Unknown error'), 'error');
+            submitButton.disabled = false;
+            submitButton.textContent = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error creating contractor:', error);
+        showNotification('Error adding contractor. Please try again.', 'error');
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
+    });
+}
+
 // Handle Enter key in email input
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Enter' && event.target.id === 'email-address') {
@@ -468,5 +667,6 @@ document.addEventListener('keydown', function(event) {
     
     if (event.key === 'Escape') {
         closeEmailDialog();
+        closeContractorModal();
     }
 });
