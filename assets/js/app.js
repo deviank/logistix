@@ -478,18 +478,25 @@ function handleCompanySubmit(event) {
         },
         body: data.toString()
     })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Company save response:', data);
+    .then(response => response.text())
+    .then(text => {
+        let dataObj = null;
+        try {
+            dataObj = JSON.parse(text);
+        } catch (e) {
+            console.error('Company save returned non-JSON:', text);
+            throw new Error('Invalid JSON');
+        }
+        console.log('Company save response:', dataObj);
         
-        if (data.success) {
+        if (dataObj.success) {
             showNotification('Company saved successfully!', 'success');
             closeCompanyModal();
             setTimeout(() => {
                 location.reload();
             }, 1500);
         } else {
-            showNotification('Error saving company: ' + data.message, 'error');
+            showNotification('Error saving company: ' + (dataObj.message || 'Unknown error'), 'error');
             submitButton.disabled = false;
             submitButton.textContent = originalText;
         }
@@ -531,6 +538,10 @@ document.addEventListener('click', function(event) {
     const modal = document.getElementById('email-dialog');
     if (event.target === modal) {
         closeEmailDialog();
+    }
+    const loadsheetModal = document.getElementById('loadsheet-modal');
+    if (event.target === loadsheetModal) {
+        closeLoadSheetModal();
     }
 });
 
@@ -667,6 +678,7 @@ document.addEventListener('keydown', function(event) {
     
     if (event.key === 'Escape') {
         closeEmailDialog();
+        closeLoadSheetModal();
         closeContractorModal();
     }
 });

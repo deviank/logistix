@@ -46,8 +46,13 @@ switch ($page) {
         $app->showStatements();
         break;
     case 'ajax':
+        // Ensure clean JSON-only output for AJAX
+        if (function_exists('ob_get_level')) {
+            while (ob_get_level() > 0) { ob_end_clean(); }
+        }
+        header('Content-Type: application/json');
         $app->handleAjax();
-        break;
+        exit; // prevent any further output
     default:
         $app->showDashboard();
         break;

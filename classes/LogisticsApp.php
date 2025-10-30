@@ -421,7 +421,8 @@ class LogisticsApp {
             'contact_person' => $contactPerson,
             'email' => $email,
             'phone' => $phone,
-            'address' => $address,
+            // DB column is billing_address; form field comes as 'address'
+            'billing_address' => $address,
             'rate_per_pallet' => $ratePerPallet,
             'payment_terms' => $paymentTerms,
             'status' => $status,

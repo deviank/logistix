@@ -315,6 +315,7 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    overflow-y: auto; /* allow scrolling when content is taller than viewport */
 }
 
 .modal-content {
@@ -709,6 +710,9 @@ body {
 .modal-content.large {
     max-width: 800px;
     width: 95%;
+    max-height: 90vh; /* keep modal within viewport height */
+    display: flex; /* allow header + body layout */
+    flex-direction: column;
 }
 
 .modal-header {
@@ -718,6 +722,14 @@ body {
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid #eee;
+    position: sticky; /* keep header visible while scrolling */
+    top: 0;
+    background: #fff;
+    z-index: 2;
+}
+
+.modal-body {
+    overflow-y: auto; /* scroll body while header stays pinned */
 }
 
 .modal-header h3 {

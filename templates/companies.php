@@ -151,6 +151,7 @@
                 <h3 id="loadsheet-modal-title">New Load Sheet</h3>
                 <button class="close-btn" onclick="closeLoadSheetModal()">&times;</button>
             </div>
+            <div class="modal-body">
             <form id="loadsheet-form">
                 <input type="hidden" id="loadsheet-id" name="loadsheet_id">
                 <input type="hidden" id="loadsheet-company-id" name="company_id">
@@ -239,6 +240,7 @@
                     <button type="submit" class="btn btn-primary">Save Load Sheet</button>
                 </div>
             </form>
+            </div>
         </div>
     </div>
 

@@ -11,8 +11,10 @@ class Database {
     private $conn;
 
     public function getConnection() {
-        $this->conn = null;
-        
+        // Reuse existing connection to preserve session state (e.g., lastInsertId)
+        if ($this->conn instanceof PDO) {
+            return $this->conn;
+        }
         try {
             $this->conn = new PDO(
                 "mysql:host=" . $this->host . ";dbname=" . $this->db_name . ";charset=utf8",
@@ -23,7 +25,6 @@ class Database {
         } catch(PDOException $exception) {
             echo "Connection error: " . $exception->getMessage();
         }
-        
         return $this->conn;
     }
     
@@ -49,9 +50,10 @@ class Database {
         $placeholders = ':' . implode(', :', array_keys($data));
         
         $sql = "INSERT INTO {$table} ({$columns}) VALUES ({$placeholders})";
-        $stmt = $this->query($sql, $data);
-        
-        return $this->getConnection()->lastInsertId();
+        $conn = $this->getConnection();
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($data);
+        return $conn->lastInsertId();
     }
     
     public function update($table, $data, $where, $whereParams = []) {
