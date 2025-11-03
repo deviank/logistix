@@ -20,7 +20,12 @@ class LogisticsApp {
     }
     
     public function showCompanies() {
-        $companies = $this->db->fetchAll("SELECT * FROM companies ORDER BY name");
+        $showInactive = isset($_GET['show_inactive']) && $_GET['show_inactive'] == '1';
+        if ($showInactive) {
+            $companies = $this->db->fetchAll("SELECT * FROM companies ORDER BY status DESC, name");
+        } else {
+            $companies = $this->db->fetchAll("SELECT * FROM companies WHERE status = 'active' ORDER BY name");
+        }
         include TEMPLATES_PATH . 'companies.php';
     }
     
@@ -85,6 +90,9 @@ class LogisticsApp {
                 break;
             case 'create_contractor':
                 $this->createContractor();
+                break;
+            case 'toggle_company_status':
+                $this->toggleCompanyStatus();
                 break;
             default:
                 http_response_code(404);
@@ -425,12 +433,11 @@ class LogisticsApp {
             'billing_address' => $address,
             'rate_per_pallet' => $ratePerPallet,
             'payment_terms' => $paymentTerms,
-            'status' => $status,
-            'created_at' => date('Y-m-d H:i:s')
+            'status' => $status
         ];
         
         if ($companyId) {
-            // Update existing company
+            // Update existing company (don't update created_at)
             $updated = $this->db->update('companies', $companyData, 'id = ?', [$companyId]);
             if ($updated) {
                 echo json_encode(['success' => true, 'message' => 'Company updated successfully']);
@@ -439,12 +446,43 @@ class LogisticsApp {
             }
         } else {
             // Create new company
+            $companyData['created_at'] = date('Y-m-d H:i:s');
             $companyId = $this->db->insert('companies', $companyData);
             if ($companyId) {
                 echo json_encode(['success' => true, 'message' => 'Company created successfully']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Failed to create company']);
             }
+        }
+    }
+    
+    public function toggleCompanyStatus() {
+        $companyId = $_POST['company_id'] ?? 0;
+        
+        if (!$companyId) {
+            echo json_encode(['success' => false, 'message' => 'Company ID required']);
+            return;
+        }
+        
+        // Get current status
+        $company = $this->db->fetchOne("SELECT status FROM companies WHERE id = ?", [$companyId]);
+        if (!$company) {
+            echo json_encode(['success' => false, 'message' => 'Company not found']);
+            return;
+        }
+        
+        $newStatus = ($company['status'] === 'active') ? 'inactive' : 'active';
+        
+        $updated = $this->db->update('companies', ['status' => $newStatus], 'id = ?', [$companyId]);
+        
+        if ($updated) {
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Company ' . $newStatus . 'd successfully',
+                'new_status' => $newStatus
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to update company status']);
         }
     }
 }

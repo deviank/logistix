@@ -240,33 +240,247 @@ function showAddCompanyForm() {
     // Reset form
     form.reset();
     document.getElementById('company-id').value = '';
+    document.getElementById('payment-terms').value = '30'; // Reset to default
+    document.getElementById('company-status').value = 'active'; // Reset to default
     title.textContent = 'Add New Company';
     
     modal.style.display = 'flex';
+    
+    // Focus on first input
+    setTimeout(() => {
+        document.getElementById('company-name').focus();
+    }, 100);
 }
 
 function editCompany(companyId) {
-    // This would load company data and show edit form
-    showNotification('Edit company functionality coming soon!', 'info');
+    fetch('?page=ajax&action=get_company_details&company_id=' + companyId)
+        .then(response => response.text())
+        .then(text => {
+            let data = null;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                console.error('Error parsing company data:', text);
+                showNotification('Error loading company data', 'error');
+                return;
+            }
+            
+            if (data.success && data.company) {
+                const company = data.company;
+                const modal = document.getElementById('company-modal');
+                const form = document.getElementById('company-form');
+                const title = document.getElementById('modal-title');
+                
+                // Populate form fields
+                document.getElementById('company-id').value = company.id;
+                document.getElementById('company-name').value = company.name || '';
+                document.getElementById('contact-person').value = company.contact_person || '';
+                document.getElementById('company-email').value = company.email || '';
+                document.getElementById('company-phone').value = company.phone || '';
+                document.getElementById('company-address').value = company.billing_address || '';
+                document.getElementById('rate-per-pallet').value = company.rate_per_pallet || '';
+                document.getElementById('payment-terms').value = company.payment_terms || 30;
+                document.getElementById('company-status').value = company.status || 'active';
+                
+                // Update modal title
+                title.textContent = 'Edit Company';
+                
+                // Show modal
+                modal.style.display = 'flex';
+                
+                // Focus on first input
+                setTimeout(() => {
+                    document.getElementById('company-name').focus();
+                }, 100);
+            } else {
+                showNotification('Error loading company: ' + (data.message || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading company:', error);
+            showNotification('Error loading company. Please try again.', 'error');
+        });
 }
 
 function viewCompanyDetails(companyId) {
-    // This would show company details
-    showNotification('Company details functionality coming soon!', 'info');
+    fetch('?page=ajax&action=get_company_details&company_id=' + companyId)
+        .then(response => response.text())
+        .then(text => {
+            let data = null;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                console.error('Error parsing company data:', text);
+                showNotification('Error loading company details', 'error');
+                return;
+            }
+            
+            if (data.success && data.company) {
+                const company = data.company;
+                const modal = document.getElementById('company-details-modal');
+                const content = document.getElementById('company-details-content');
+                
+                // Build details HTML
+                content.innerHTML = `
+                    <div style="line-height: 1.8;">
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Company Name:</strong><br>
+                            ${escapeHtml(company.name)}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Contact Person:</strong><br>
+                            ${escapeHtml(company.contact_person || '-')}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Email:</strong><br>
+                            <a href="mailto:${escapeHtml(company.email)}">${escapeHtml(company.email || '-')}</a>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Phone:</strong><br>
+                            ${escapeHtml(company.phone || '-')}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Billing Address:</strong><br>
+                            ${escapeHtml(company.billing_address || '-')}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Payment Terms:</strong><br>
+                            ${company.payment_terms || 30} days
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Rate per Pallet:</strong><br>
+                            R ${parseFloat(company.rate_per_pallet || 0).toFixed(2)}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Status:</strong><br>
+                            <span class="status-badge status-${company.status || 'active'}">${(company.status || 'active').charAt(0).toUpperCase() + (company.status || 'active').slice(1)}</span>
+                        </div>
+                        ${company.vat_number ? `
+                        <div style="margin-bottom: 1rem;">
+                            <strong>VAT Number:</strong><br>
+                            ${escapeHtml(company.vat_number)}
+                        </div>
+                        ` : ''}
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Created:</strong><br>
+                            ${company.created_at ? new Date(company.created_at).toLocaleDateString() : '-'}
+                        </div>
+                    </div>
+                `;
+                
+                modal.style.display = 'flex';
+            } else {
+                showNotification('Error loading company details: ' + (data.message || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading company details:', error);
+            showNotification('Error loading company details. Please try again.', 'error');
+        });
+}
+
+function closeCompanyDetailsModal() {
+    const modal = document.getElementById('company-details-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
 }
 
 function activateCompany(companyId) {
     if (!confirm('Are you sure you want to activate this company?')) {
         return;
     }
-    showNotification('Company activation functionality coming soon!', 'info');
+    
+    const formData = new URLSearchParams();
+    formData.append('action', 'toggle_company_status');
+    formData.append('company_id', companyId);
+    
+    fetch('?page=ajax', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString()
+    })
+    .then(response => response.text())
+    .then(text => {
+        let data = null;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('Error parsing response:', text);
+            showNotification('Error updating company status', 'error');
+            return;
+        }
+        
+        if (data.success) {
+            showNotification(data.message || 'Company activated successfully!', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showNotification('Error: ' + (data.message || 'Failed to activate company'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error activating company:', error);
+        showNotification('Error activating company. Please try again.', 'error');
+    });
 }
 
 function deactivateCompany(companyId) {
     if (!confirm('Are you sure you want to deactivate this company?')) {
         return;
     }
-    showNotification('Company deactivation functionality coming soon!', 'info');
+    
+    const formData = new URLSearchParams();
+    formData.append('action', 'toggle_company_status');
+    formData.append('company_id', companyId);
+    
+    fetch('?page=ajax', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString()
+    })
+    .then(response => response.text())
+    .then(text => {
+        let data = null;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('Error parsing response:', text);
+            showNotification('Error updating company status', 'error');
+            return;
+        }
+        
+        if (data.success) {
+            showNotification(data.message || 'Company deactivated successfully!', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showNotification('Error: ' + (data.message || 'Failed to deactivate company'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error deactivating company:', error);
+        showNotification('Error deactivating company. Please try again.', 'error');
+    });
+}
+
+function toggleInactiveCompanies() {
+    const currentUrl = new URL(window.location);
+    const showInactive = currentUrl.searchParams.get('show_inactive') === '1';
+    currentUrl.searchParams.set('show_inactive', showInactive ? '0' : '1');
+    window.location.href = currentUrl.toString();
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function closeCompanyModal() {
@@ -535,13 +749,21 @@ function showNotification(message, type = 'info') {
 
 // Close modal when clicking outside
 document.addEventListener('click', function(event) {
-    const modal = document.getElementById('email-dialog');
-    if (event.target === modal) {
+    const emailModal = document.getElementById('email-dialog');
+    if (event.target === emailModal) {
         closeEmailDialog();
     }
     const loadsheetModal = document.getElementById('loadsheet-modal');
     if (event.target === loadsheetModal) {
         closeLoadSheetModal();
+    }
+    const companyDetailsModal = document.getElementById('company-details-modal');
+    if (event.target === companyDetailsModal) {
+        closeCompanyDetailsModal();
+    }
+    const companyModal = document.getElementById('company-modal');
+    if (event.target === companyModal) {
+        closeCompanyModal();
     }
 });
 
@@ -680,5 +902,7 @@ document.addEventListener('keydown', function(event) {
         closeEmailDialog();
         closeLoadSheetModal();
         closeContractorModal();
+        closeCompanyDetailsModal();
+        closeCompanyModal();
     }
 });

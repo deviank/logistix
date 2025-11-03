@@ -31,8 +31,11 @@
             <!-- Companies List -->
             <div class="content-section">
                 <div class="section-header">
-                    <h3>Active Companies</h3>
+                    <h3 id="companies-header"><?php echo $showInactive ?? false ? 'All Companies' : 'Active Companies'; ?></h3>
                     <div class="section-actions">
+                        <button class="btn btn-sm btn-secondary" id="toggle-inactive-btn" onclick="toggleInactiveCompanies()" style="margin-right: 10px;">
+                            <?php echo ($showInactive ?? false) ? 'Hide Inactive' : 'Show Inactive'; ?>
+                        </button>
                         <input type="text" id="company-search" placeholder="Search companies..." class="search-input">
                     </div>
                 </div>
@@ -275,6 +278,19 @@
                     <button type="submit" class="btn btn-primary">Add Contractor</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Company Details Modal -->
+    <div id="company-details-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Company Details</h3>
+                <button class="close-btn" onclick="closeCompanyDetailsModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="company-details-content" style="max-height: 70vh; overflow-y: auto;">
+                <!-- Content will be loaded dynamically -->
+            </div>
         </div>
     </div>
 
