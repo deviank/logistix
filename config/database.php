@@ -63,10 +63,38 @@ class Database {
         }
         $setClause = implode(', ', $setParts);
         
-        $sql = "UPDATE {$table} SET {$setClause} WHERE {$where}";
-        $params = array_merge($data, $whereParams);
+        // Convert WHERE clause to use named placeholders if it uses positional ones
+        $whereClause = $where;
+        $finalParams = $data;
         
-        $stmt = $this->query($sql, $params);
+        if (!empty($whereParams)) {
+            // Check if WHERE clause uses positional placeholders (?)
+            if (strpos($where, '?') !== false) {
+                // Convert positional to named placeholders
+                $whereClause = '';
+                $paramIndex = 0;
+                $whereLength = strlen($where);
+                
+                for ($i = 0; $i < $whereLength; $i++) {
+                    if ($where[$i] === '?') {
+                        $paramName = ':where_' . $paramIndex;
+                        $whereClause .= $paramName;
+                        // PDO expects parameter keys without the colon prefix
+                        $finalParams['where_' . $paramIndex] = $whereParams[$paramIndex];
+                        $paramIndex++;
+                    } else {
+                        $whereClause .= $where[$i];
+                    }
+                }
+            } else {
+                // WHERE clause already uses named placeholders
+                $finalParams = array_merge($data, $whereParams);
+            }
+        }
+        
+        $sql = "UPDATE {$table} SET {$setClause} WHERE {$whereClause}";
+        
+        $stmt = $this->query($sql, $finalParams);
         return $stmt->rowCount();
     }
     
