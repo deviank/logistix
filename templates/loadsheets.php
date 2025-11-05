@@ -74,9 +74,15 @@
                                             <div class="action-buttons">
                                                 <button class="btn btn-sm btn-info" onclick="viewLoadSheet(<?php echo $loadSheet['id']; ?>)">View</button>
                                                 <?php if ($loadSheet['status'] === 'completed'): ?>
-                                                    <button class="btn btn-sm btn-primary create-invoice-btn" data-load-sheet-id="<?php echo $loadSheet['id']; ?>">
-                                                        Create Invoice
-                                                    </button>
+                                                    <?php if (!isset($loadSheet['invoice_id']) || empty($loadSheet['invoice_id']) || $loadSheet['invoice_id'] == 0): ?>
+                                                        <button class="btn btn-sm btn-primary create-invoice-btn" data-load-sheet-id="<?php echo $loadSheet['id']; ?>">
+                                                            Create Invoice
+                                                        </button>
+                                                    <?php else: ?>
+                                                        <a href="?page=invoices" class="btn btn-sm btn-success">
+                                                            Invoice: <?php echo htmlspecialchars($loadSheet['invoice_number']); ?>
+                                                        </a>
+                                                    <?php endif; ?>
                                                 <?php else: ?>
                                                     <button class="btn btn-sm btn-warning" onclick="editLoadSheet(<?php echo $loadSheet['id']; ?>)">Edit</button>
                                                 <?php endif; ?>

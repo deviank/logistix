@@ -31,9 +31,12 @@ class LogisticsApp {
     
     public function showLoadSheets() {
         $loadSheets = $this->db->fetchAll("
-            SELECT ls.*, c.name as company_name 
+            SELECT ls.*, c.name as company_name,
+                   i.id as invoice_id,
+                   i.invoice_number
             FROM load_sheets ls 
             JOIN companies c ON ls.company_id = c.id 
+            LEFT JOIN invoices i ON i.load_sheet_id = ls.id
             ORDER BY ls.created_at DESC
         ");
         include TEMPLATES_PATH . 'loadsheets.php';
@@ -131,9 +134,13 @@ class LogisticsApp {
     
     private function getRecentLoadSheets() {
         return $this->db->fetchAll("
-            SELECT ls.*, c.name as company_name 
+            SELECT ls.*, c.name as company_name,
+                   i.id as invoice_id,
+                   i.invoice_number,
+                   i.payment_status as invoice_payment_status
             FROM load_sheets ls 
             JOIN companies c ON ls.company_id = c.id 
+            LEFT JOIN invoices i ON i.load_sheet_id = ls.id
             ORDER BY ls.created_at DESC 
             LIMIT 5
         ");

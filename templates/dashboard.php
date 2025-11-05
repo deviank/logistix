@@ -68,9 +68,15 @@
                                     </div>
                                     <div class="item-actions">
                                         <?php if ($loadSheet['status'] === 'completed'): ?>
-                                            <button class="btn btn-primary create-invoice-btn" data-load-sheet-id="<?php echo $loadSheet['id']; ?>">
-                                                Create Invoice
-                                            </button>
+                                            <?php if (!isset($loadSheet['invoice_id']) || empty($loadSheet['invoice_id']) || $loadSheet['invoice_id'] == 0): ?>
+                                                <button class="btn btn-primary create-invoice-btn" data-load-sheet-id="<?php echo $loadSheet['id']; ?>">
+                                                    Create Invoice
+                                                </button>
+                                            <?php else: ?>
+                                                <a href="?page=invoices" class="btn btn-success">
+                                                    View Invoice (<?php echo htmlspecialchars($loadSheet['invoice_number']); ?>)
+                                                </a>
+                                            <?php endif; ?>
                                         <?php else: ?>
                                             <span class="status-badge status-<?php echo $loadSheet['status']; ?>">
                                                 <?php echo ucfirst($loadSheet['status']); ?>
