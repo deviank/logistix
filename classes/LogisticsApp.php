@@ -39,6 +39,17 @@ class LogisticsApp {
             LEFT JOIN invoices i ON i.load_sheet_id = ls.id
             ORDER BY ls.created_at DESC
         ");
+        
+        // Map status values for display
+        $statusMap = [
+            'draft' => 'pending',
+            'confirmed' => 'in_progress',
+            'completed' => 'completed'
+        ];
+        foreach ($loadSheets as &$ls) {
+            $ls['status'] = $statusMap[$ls['status']] ?? $ls['status'];
+        }
+        
         include TEMPLATES_PATH . 'loadsheets.php';
     }
     
@@ -55,7 +66,10 @@ class LogisticsApp {
     
     public function showStatements() {
         $statements = $this->db->fetchAll("
-            SELECT s.*, c.name as company_name 
+            SELECT s.*, c.name as company_name,
+                   CONCAT('STMT', YEAR(s.statement_date), LPAD(MONTH(s.statement_date), 2, '0'), LPAD(s.id, 3, '0')) as statement_number,
+                   s.statement_period as statement_month,
+                   CASE WHEN s.closing_balance > 0 THEN 'pending' ELSE 'paid' END as status
             FROM statements s 
             JOIN companies c ON s.company_id = c.id 
             ORDER BY s.created_at DESC
@@ -96,6 +110,27 @@ class LogisticsApp {
                 break;
             case 'toggle_company_status':
                 $this->toggleCompanyStatus();
+                break;
+            case 'get_invoice_details':
+                $this->getInvoiceDetails();
+                break;
+            case 'get_loadsheet_details':
+                $this->getLoadSheetDetails();
+                break;
+            case 'get_statement_details':
+                $this->getStatementDetails();
+                break;
+            case 'generate_statement':
+                $this->generateStatement();
+                break;
+            case 'download_invoice':
+                $this->downloadInvoice();
+                break;
+            case 'download_statement':
+                $this->downloadStatement();
+                break;
+            case 'send_statement_email':
+                $this->sendStatementEmail();
                 break;
             default:
                 http_response_code(404);
@@ -327,6 +362,7 @@ class LogisticsApp {
         $contractorCost = $_POST['contractor_cost'] ?? 0;
         $status = $_POST['status'] ?? 'pending';
         $date = $_POST['date'] ?? date('Y-m-d');
+        $loadSheetId = $_POST['loadsheet_id'] ?? 0;
         
         if (!$companyId || !$palletQuantity || !$ratePerPallet || !$deliveryMethod) {
             echo json_encode(['success' => false, 'message' => 'Required fields missing']);
@@ -345,10 +381,18 @@ class LogisticsApp {
         // Convert delivery method format (own_driver -> own, contractor -> contractor)
         $deliveryMethodValue = ($deliveryMethod === 'own_driver') ? 'own' : 'contractor';
         
+        // Map status values (template uses pending/in_progress/completed, DB uses draft/confirmed/completed)
+        $statusMap = [
+            'pending' => 'draft',
+            'in_progress' => 'confirmed',
+            'completed' => 'completed'
+        ];
+        $statusValue = $statusMap[$status] ?? 'draft';
+        
         // Calculate final rate
         $finalRate = $palletQuantity * $ratePerPallet;
         
-        // Create load sheet data
+        // Create or update load sheet data
         $loadSheetData = [
             'company_id' => $companyId,
             'pallet_quantity' => $palletQuantity,
@@ -358,11 +402,27 @@ class LogisticsApp {
             'delivery_method' => $deliveryMethodValue,
             'contractor_name' => $contractorName,
             'contractor_cost' => $contractorCost,
-            'status' => $status,
-            'date' => $date,
-            'created_at' => date('Y-m-d H:i:s')
+            'status' => $statusValue,
+            'date' => $date
         ];
         
+        if ($loadSheetId) {
+            // Update existing load sheet
+            $updated = $this->db->update('load_sheets', $loadSheetData, 'id = ?', [$loadSheetId]);
+            if ($updated) {
+                echo json_encode([
+                    'success' => true,
+                    'loadsheet_id' => $loadSheetId,
+                    'message' => 'Load sheet updated successfully'
+                ]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to update load sheet']);
+            }
+            return;
+        }
+        
+        // Create new load sheet
+        $loadSheetData['created_at'] = date('Y-m-d H:i:s');
         $loadSheetId = $this->db->insert('load_sheets', $loadSheetData);
         
         if ($loadSheetId) {
@@ -490,6 +550,256 @@ class LogisticsApp {
             ]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Failed to update company status']);
+        }
+    }
+    
+    public function getInvoiceDetails() {
+        $invoiceId = $_POST['invoice_id'] ?? $_GET['invoice_id'] ?? 0;
+        
+        if (!$invoiceId) {
+            echo json_encode(['success' => false, 'message' => 'Invoice ID required']);
+            return;
+        }
+        
+        $invoice = $this->db->fetchOne("
+            SELECT i.*, c.name as company_name, c.contact_person, c.email, c.phone, 
+                   c.billing_address, c.vat_number,
+                   ls.pallet_quantity, ls.cargo_description, ls.delivery_method,
+                   ls.contractor_name, ls.contractor_cost
+            FROM invoices i 
+            JOIN companies c ON i.company_id = c.id 
+            JOIN load_sheets ls ON i.load_sheet_id = ls.id
+            WHERE i.id = ?
+        ", [$invoiceId]);
+        
+        if ($invoice) {
+            echo json_encode(['success' => true, 'invoice' => $invoice]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Invoice not found']);
+        }
+    }
+    
+    public function getLoadSheetDetails() {
+        $loadSheetId = $_POST['loadsheet_id'] ?? $_GET['loadsheet_id'] ?? 0;
+        
+        if (!$loadSheetId) {
+            echo json_encode(['success' => false, 'message' => 'Load sheet ID required']);
+            return;
+        }
+        
+        $loadSheet = $this->db->fetchOne("
+            SELECT ls.*, c.name as company_name, c.rate_per_pallet as company_rate_per_pallet,
+                   c.payment_terms, i.id as invoice_id, i.invoice_number
+            FROM load_sheets ls 
+            JOIN companies c ON ls.company_id = c.id 
+            LEFT JOIN invoices i ON i.load_sheet_id = ls.id
+            WHERE ls.id = ?
+        ", [$loadSheetId]);
+        
+        if ($loadSheet) {
+            // Map status back to template values
+            $statusMap = [
+                'draft' => 'pending',
+                'confirmed' => 'in_progress',
+                'completed' => 'completed'
+            ];
+            $loadSheet['status'] = $statusMap[$loadSheet['status']] ?? $loadSheet['status'];
+            
+            // Map delivery method back
+            $loadSheet['delivery_method'] = $loadSheet['delivery_method'] === 'own' ? 'own_driver' : 'contractor';
+            
+            echo json_encode(['success' => true, 'loadsheet' => $loadSheet]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Load sheet not found']);
+        }
+    }
+    
+    public function getStatementDetails() {
+        $statementId = $_POST['statement_id'] ?? $_GET['statement_id'] ?? 0;
+        
+        if (!$statementId) {
+            echo json_encode(['success' => false, 'message' => 'Statement ID required']);
+            return;
+        }
+        
+        $statement = $this->db->fetchOne("
+            SELECT s.*, c.name as company_name, c.contact_person, c.email, c.phone, c.billing_address
+            FROM statements s 
+            JOIN companies c ON s.company_id = c.id 
+            WHERE s.id = ?
+        ", [$statementId]);
+        
+        if ($statement) {
+            // Get statement items (invoices)
+            $items = $this->db->fetchAll("
+                SELECT si.*, i.invoice_date, i.due_date
+                FROM statement_items si
+                JOIN invoices i ON si.invoice_id = i.id
+                WHERE si.statement_id = ?
+                ORDER BY si.invoice_date ASC
+            ", [$statementId]);
+            
+            $statement['items'] = $items;
+            echo json_encode(['success' => true, 'statement' => $statement]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Statement not found']);
+        }
+    }
+    
+    public function generateStatement() {
+        $companyId = $_POST['company_id'] ?? 0;
+        $month = $_POST['month'] ?? '';
+        $notes = $_POST['notes'] ?? '';
+        
+        if (!$companyId || !$month) {
+            echo json_encode(['success' => false, 'message' => 'Company ID and month required']);
+            return;
+        }
+        
+        // Parse month (format: YYYY-MM)
+        $year = substr($month, 0, 4);
+        $monthNum = substr($month, 5, 2);
+        
+        // Get all invoices for this company in this month
+        $invoices = $this->db->fetchAll("
+            SELECT * FROM invoices 
+            WHERE company_id = ? 
+            AND YEAR(invoice_date) = ? 
+            AND MONTH(invoice_date) = ?
+            ORDER BY invoice_date ASC
+        ", [$companyId, $year, $monthNum]);
+        
+        if (empty($invoices)) {
+            echo json_encode(['success' => false, 'message' => 'No invoices found for this period']);
+            return;
+        }
+        
+        // Calculate totals
+        $totalCharges = 0;
+        $totalPayments = 0;
+        foreach ($invoices as $invoice) {
+            $totalCharges += $invoice['total_amount'];
+            if ($invoice['payment_status'] === 'paid') {
+                $totalPayments += $invoice['total_amount'];
+            }
+        }
+        
+        // Get opening balance (previous month's closing balance)
+        $prevMonth = date('Y-m', strtotime($month . '-01 -1 month'));
+        $prevStatement = $this->db->fetchOne("
+            SELECT closing_balance FROM statements 
+            WHERE company_id = ? AND statement_period = ?
+            ORDER BY created_at DESC LIMIT 1
+        ", [$companyId, $prevMonth]);
+        
+        $openingBalance = $prevStatement ? $prevStatement['closing_balance'] : 0;
+        $closingBalance = $openingBalance + $totalCharges - $totalPayments;
+        
+        // Create statement (statement_number will be computed in queries)
+        $statementData = [
+            'company_id' => $companyId,
+            'statement_period' => $month,
+            'statement_date' => date('Y-m-d'),
+            'opening_balance' => $openingBalance,
+            'total_charges' => $totalCharges,
+            'total_payments' => $totalPayments,
+            'closing_balance' => $closingBalance,
+            'invoice_count' => count($invoices)
+        ];
+        
+        $statementId = $this->db->insert('statements', $statementData);
+        
+        // Generate statement number after insert
+        $statementNumber = 'STMT' . $year . $monthNum . str_pad($statementId, 3, '0', STR_PAD_LEFT);
+        
+        if ($statementId) {
+            // Create statement items
+            foreach ($invoices as $invoice) {
+                $this->db->insert('statement_items', [
+                    'statement_id' => $statementId,
+                    'invoice_id' => $invoice['id'],
+                    'invoice_date' => $invoice['invoice_date'],
+                    'invoice_number' => $invoice['invoice_number'],
+                    'amount' => $invoice['total_amount'],
+                    'payment_status' => $invoice['payment_status'],
+                    'payment_date' => $invoice['payment_date']
+                ]);
+            }
+            
+            // Generate PDF
+            $pdfGenerator = new PDFGenerator();
+            $pdfData = $pdfGenerator->generateStatementPDF($statementId, $this->db);
+            
+            echo json_encode([
+                'success' => true,
+                'statement_id' => $statementId,
+                'statement_number' => $statementNumber,
+                'pdf_url' => $pdfData['url'] ?? null,
+                'message' => 'Statement generated successfully'
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to create statement']);
+        }
+    }
+    
+    public function downloadInvoice() {
+        $invoiceId = $_GET['invoice_id'] ?? 0;
+        
+        if (!$invoiceId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invoice ID required']);
+            return;
+        }
+        
+        $pdfGenerator = new PDFGenerator();
+        $pdfData = $pdfGenerator->generateInvoicePDF($invoiceId, $this->db);
+        
+        if ($pdfData && isset($pdfData['url'])) {
+            header('Location: ' . $pdfData['url']);
+            exit;
+        } else {
+            http_response_code(404);
+            echo json_encode(['error' => 'Invoice PDF not found']);
+        }
+    }
+    
+    public function downloadStatement() {
+        $statementId = $_GET['statement_id'] ?? 0;
+        
+        if (!$statementId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Statement ID required']);
+            return;
+        }
+        
+        $pdfGenerator = new PDFGenerator();
+        $pdfData = $pdfGenerator->generateStatementPDF($statementId, $this->db);
+        
+        if ($pdfData && isset($pdfData['url'])) {
+            header('Location: ' . $pdfData['url']);
+            exit;
+        } else {
+            http_response_code(404);
+            echo json_encode(['error' => 'Statement PDF not found']);
+        }
+    }
+    
+    public function sendStatementEmail() {
+        $statementId = $_POST['statement_id'] ?? 0;
+        $emailAddress = $_POST['email_address'] ?? '';
+        
+        if (!$statementId || !$emailAddress) {
+            echo json_encode(['success' => false, 'message' => 'Statement ID and email address required']);
+            return;
+        }
+        
+        $emailSender = new EmailSender();
+        $sent = $emailSender->sendStatementEmail($statementId, $emailAddress, $this->db);
+        
+        if ($sent) {
+            echo json_encode(['success' => true, 'message' => 'Statement sent successfully']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to send statement email']);
         }
     }
 }

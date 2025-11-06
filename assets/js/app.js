@@ -38,6 +38,14 @@ function initializeEventListeners() {
         });
     });
     
+    // Send email buttons
+    document.querySelectorAll('.send-email-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const invoiceId = this.getAttribute('data-invoice-id');
+            sendInvoiceEmailFromButton(invoiceId);
+        });
+    });
+    
     // Load sheet form submission
     const loadSheetForm = document.getElementById('loadsheet-form');
     if (loadSheetForm) {
@@ -54,6 +62,18 @@ function initializeEventListeners() {
     const contractorForm = document.getElementById('contractor-form');
     if (contractorForm) {
         contractorForm.addEventListener('submit', handleContractorSubmit);
+    }
+    
+    // Statement form submission (for generate-statement-form)
+    const generateStatementForm = document.getElementById('generate-statement-form');
+    if (generateStatementForm) {
+        generateStatementForm.addEventListener('submit', handleGenerateStatementSubmit);
+    }
+    
+    // Statement form submission (for statement-form in invoices page)
+    const statementForm = document.getElementById('statement-form');
+    if (statementForm) {
+        statementForm.addEventListener('submit', handleGenerateStatementSubmit);
     }
 }
 
@@ -151,25 +171,53 @@ function markInvoicePaid(invoiceId) {
 
 function showEmailDialog(invoiceData) {
     const dialog = document.getElementById('email-dialog');
-    const detailsElement = document.getElementById('invoice-details');
+    const detailsElement = document.getElementById('invoice-details') || document.getElementById('statement-details');
     
-    detailsElement.innerHTML = `
-        <p><strong>Invoice ${invoiceData.invoice_number}</strong> has been created successfully!</p>
-        <p>Total Amount: R ${parseFloat(invoiceData.total_amount).toFixed(2)}</p>
-    `;
-    
-    dialog.style.display = 'flex';
-    
-    // Focus on email input
-    setTimeout(() => {
-        document.getElementById('email-address').focus();
-    }, 100);
+    if (dialog && detailsElement) {
+        detailsElement.innerHTML = `
+            <p><strong>Invoice ${invoiceData.invoice_number || invoiceData.invoice?.invoice_number}</strong> has been created successfully!</p>
+            <p>Total Amount: R ${parseFloat(invoiceData.total_amount || invoiceData.invoice?.total_amount || 0).toFixed(2)}</p>
+        `;
+        
+        // Update dialog title
+        const title = dialog.querySelector('h3');
+        if (title) title.textContent = 'Send Invoice to Customer';
+        
+        // Update send button onclick
+        const sendButton = dialog.querySelector('.btn-primary');
+        if (sendButton) {
+            sendButton.setAttribute('onclick', 'sendInvoiceEmail()');
+            sendButton.textContent = 'Send Invoice';
+        }
+        
+        dialog.style.display = 'flex';
+        
+        // Focus on email input
+        setTimeout(() => {
+            const emailInput = document.getElementById('email-address');
+            if (emailInput) {
+                emailInput.value = '';
+                emailInput.focus();
+            }
+        }, 100);
+    }
 }
 
 function closeEmailDialog() {
     const dialog = document.getElementById('email-dialog');
     dialog.style.display = 'none';
     currentInvoiceData = null;
+    currentStatementData = null;
+    
+    // Reset email input
+    const emailInput = document.getElementById('email-address');
+    if (emailInput) emailInput.value = '';
+    
+    // Reset send button onclick to default (for invoices)
+    const sendButton = dialog.querySelector('.btn-primary');
+    if (sendButton) {
+        sendButton.setAttribute('onclick', 'sendInvoiceEmail()');
+    }
 }
 
 function sendInvoiceEmail() {
@@ -221,6 +269,24 @@ function sendInvoiceEmail() {
         sendButton.disabled = false;
         sendButton.textContent = originalText;
     });
+}
+
+function sendInvoiceEmailFromButton(invoiceId) {
+    // Load invoice details first
+    fetch('?page=ajax&action=get_invoice_details&invoice_id=' + invoiceId)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.invoice) {
+                currentInvoiceData = { invoice_id: invoiceId };
+                showEmailDialog(data.invoice);
+            } else {
+                showNotification('Error loading invoice: ' + (data.message || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading invoice:', error);
+            showNotification('Error loading invoice. Please try again.', 'error');
+        });
 }
 
 function createSampleData() {
@@ -608,6 +674,7 @@ function handleLoadSheetSubmit(event) {
     const form = event.target;
     const deliveryMethod = document.getElementById('delivery-method').value;
     const contractorSelect = document.getElementById('contractor-select');
+    const loadSheetId = document.getElementById('loadsheet-id').value;
     
     // Validate contractor selection if delivery method is contractor
     if (deliveryMethod === 'contractor') {
@@ -623,7 +690,7 @@ function handleLoadSheetSubmit(event) {
     const originalText = submitButton.textContent;
     
     submitButton.disabled = true;
-    submitButton.textContent = 'Saving...';
+    submitButton.textContent = loadSheetId ? 'Updating...' : 'Saving...';
     
     // Convert FormData to URL-encoded string
     const data = new URLSearchParams();
@@ -631,8 +698,11 @@ function handleLoadSheetSubmit(event) {
         data.append(key, value);
     }
     data.append('action', 'create_loadsheet');
+    if (loadSheetId) {
+        data.append('loadsheet_id', loadSheetId);
+    }
     
-    console.log('Creating load sheet:', Object.fromEntries(data));
+    console.log(loadSheetId ? 'Updating load sheet:' : 'Creating load sheet:', Object.fromEntries(data));
     
     fetch('?page=ajax', {
         method: 'POST',
@@ -643,23 +713,23 @@ function handleLoadSheetSubmit(event) {
     })
     .then(response => response.json())
     .then(data => {
-        console.log('Load sheet creation response:', data);
+        console.log('Load sheet response:', data);
         
         if (data.success) {
-            showNotification('Load sheet created successfully!', 'success');
+            showNotification(loadSheetId ? 'Load sheet updated successfully!' : 'Load sheet created successfully!', 'success');
             closeLoadSheetModal();
             setTimeout(() => {
                 location.reload();
             }, 1500);
         } else {
-            showNotification('Error creating load sheet: ' + data.message, 'error');
+            showNotification('Error saving load sheet: ' + data.message, 'error');
             submitButton.disabled = false;
             submitButton.textContent = originalText;
         }
     })
     .catch(error => {
-        console.error('Error creating load sheet:', error);
-        showNotification('Error creating load sheet. Please try again.', 'error');
+        console.error('Error saving load sheet:', error);
+        showNotification('Error saving load sheet. Please try again.', 'error');
         submitButton.disabled = false;
         submitButton.textContent = originalText;
     });
@@ -752,6 +822,8 @@ document.addEventListener('click', function(event) {
     const emailModal = document.getElementById('email-dialog');
     if (event.target === emailModal) {
         closeEmailDialog();
+        currentInvoiceData = null;
+        currentStatementData = null;
     }
     const loadsheetModal = document.getElementById('loadsheet-modal');
     if (event.target === loadsheetModal) {
@@ -764,6 +836,22 @@ document.addEventListener('click', function(event) {
     const companyModal = document.getElementById('company-modal');
     if (event.target === companyModal) {
         closeCompanyModal();
+    }
+    const invoiceDetailsModal = document.getElementById('invoice-details-modal');
+    if (event.target === invoiceDetailsModal) {
+        closeInvoiceDetailsModal();
+    }
+    const statementDetailsModal = document.getElementById('statement-details-modal');
+    if (event.target === statementDetailsModal) {
+        closeStatementDetailsModal();
+    }
+    const generateStatementModal = document.getElementById('generate-statement-modal');
+    if (event.target === generateStatementModal) {
+        closeGenerateStatementModal();
+    }
+    const statementModal = document.getElementById('statement-modal');
+    if (event.target === statementModal) {
+        closeStatementModal();
     }
 });
 
@@ -892,10 +980,520 @@ function handleContractorSubmit(event) {
     });
 }
 
+// Invoice Functions
+function viewInvoice(invoiceId) {
+    fetch('?page=ajax&action=get_invoice_details&invoice_id=' + invoiceId)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.invoice) {
+                const invoice = data.invoice;
+                const modal = document.getElementById('invoice-details-modal');
+                const content = document.getElementById('invoice-details-content');
+                
+                content.innerHTML = `
+                    <div style="line-height: 1.8;">
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Invoice Number:</strong><br>
+                            ${escapeHtml(invoice.invoice_number)}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Company:</strong><br>
+                            ${escapeHtml(invoice.company_name)}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Invoice Date:</strong><br>
+                            ${new Date(invoice.invoice_date).toLocaleDateString()}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Due Date:</strong><br>
+                            ${new Date(invoice.due_date).toLocaleDateString()}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Description:</strong><br>
+                            ${escapeHtml(invoice.cargo_description || '-')}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Pallets:</strong><br>
+                            ${invoice.pallet_quantity}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Subtotal:</strong><br>
+                            R ${parseFloat(invoice.subtotal).toFixed(2)}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>VAT (${invoice.vat_rate}%):</strong><br>
+                            R ${parseFloat(invoice.vat_amount).toFixed(2)}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Total Amount:</strong><br>
+                            R ${parseFloat(invoice.total_amount).toFixed(2)}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Payment Status:</strong><br>
+                            <span class="status-badge status-${invoice.payment_status}">${invoice.payment_status.charAt(0).toUpperCase() + invoice.payment_status.slice(1)}</span>
+                        </div>
+                    </div>
+                `;
+                
+                modal.style.display = 'flex';
+            } else {
+                showNotification('Error loading invoice: ' + (data.message || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading invoice:', error);
+            showNotification('Error loading invoice. Please try again.', 'error');
+        });
+}
+
+function closeInvoiceDetailsModal() {
+    const modal = document.getElementById('invoice-details-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function downloadInvoice(invoiceId) {
+    window.location.href = '?page=ajax&action=download_invoice&invoice_id=' + invoiceId;
+}
+
+// Load Sheet Functions
+function showAddLoadSheetForm() {
+    const modal = document.getElementById('loadsheet-modal');
+    const form = document.getElementById('loadsheet-form');
+    
+    if (!modal || !form) return;
+    
+    // Reset form
+    form.reset();
+    document.getElementById('loadsheet-id').value = '';
+    document.getElementById('loadsheet-company-id').value = '';
+    
+    // Reset contractor fields
+    const contractorSelectGroup = document.getElementById('contractor-select-group');
+    const contractorCostGroup = document.getElementById('contractor-cost-group');
+    if (contractorSelectGroup) contractorSelectGroup.style.display = 'none';
+    if (contractorCostGroup) contractorCostGroup.style.display = 'none';
+    
+    // Reset calculations
+    document.getElementById('calc-subtotal').textContent = 'R 0.00';
+    document.getElementById('calc-contractor-cost').textContent = 'R 0.00';
+    document.getElementById('calc-profit').textContent = 'R 0.00';
+    
+    // Set default date
+    document.getElementById('loadsheet-date').value = new Date().toISOString().split('T')[0];
+    
+    // Update modal title
+    const title = document.getElementById('loadsheet-modal-title');
+    if (title) title.textContent = 'New Load Sheet';
+    
+    modal.style.display = 'flex';
+    
+    // Focus on first input
+    setTimeout(() => {
+        const companySelect = document.getElementById('loadsheet-company');
+        if (companySelect) companySelect.focus();
+    }, 100);
+}
+
+function viewLoadSheet(loadSheetId) {
+    fetch('?page=ajax&action=get_loadsheet_details&loadsheet_id=' + loadSheetId)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.loadsheet) {
+                const ls = data.loadsheet;
+                showNotification(`Load Sheet Details: ${ls.company_name} - ${ls.pallet_quantity} pallets - R ${parseFloat(ls.final_rate).toFixed(2)}`, 'info');
+                // Could show in a modal if needed
+            } else {
+                showNotification('Error loading load sheet: ' + (data.message || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading load sheet:', error);
+            showNotification('Error loading load sheet. Please try again.', 'error');
+        });
+}
+
+function editLoadSheet(loadSheetId) {
+    fetch('?page=ajax&action=get_loadsheet_details&loadsheet_id=' + loadSheetId)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.loadsheet) {
+                const ls = data.loadsheet;
+                const modal = document.getElementById('loadsheet-modal');
+                const form = document.getElementById('loadsheet-form');
+                
+                if (!modal || !form) return;
+                
+                // Populate form
+                document.getElementById('loadsheet-id').value = ls.id;
+                document.getElementById('loadsheet-company-id').value = ls.company_id;
+                document.getElementById('loadsheet-company').value = ls.company_name;
+                document.getElementById('loadsheet-date').value = ls.date || ls.created_at.split(' ')[0];
+                document.getElementById('pallet-quantity').value = ls.pallet_quantity;
+                document.getElementById('rate-per-pallet').value = ls.rate_per_pallet;
+                document.getElementById('cargo-description').value = ls.cargo_description || '';
+                document.getElementById('loadsheet-status').value = ls.status;
+                
+                // Handle delivery method
+                const deliveryMethod = ls.delivery_method === 'own' ? 'own_driver' : 'contractor';
+                document.getElementById('delivery-method').value = deliveryMethod;
+                toggleContractorFields();
+                
+                if (deliveryMethod === 'contractor' && ls.contractor_name) {
+                    // Load contractors and select the one used
+                    loadContractors();
+                    setTimeout(() => {
+                        const contractorSelect = document.getElementById('contractor-select');
+                        if (contractorSelect) {
+                            // Find contractor by name
+                            for (let option of contractorSelect.options) {
+                                if (option.text === ls.contractor_name) {
+                                    contractorSelect.value = option.value;
+                                    handleContractorSelection();
+                                    break;
+                                }
+                            }
+                        }
+                        document.getElementById('contractor-cost').value = ls.contractor_cost || '';
+                    }, 300);
+                }
+                
+                // Update calculations
+                calculateTotal();
+                
+                // Update modal title
+                const title = document.getElementById('loadsheet-modal-title');
+                if (title) title.textContent = `Edit Load Sheet - ${ls.company_name}`;
+                
+                modal.style.display = 'flex';
+            } else {
+                showNotification('Error loading load sheet: ' + (data.message || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading load sheet:', error);
+            showNotification('Error loading load sheet. Please try again.', 'error');
+        });
+}
+
+function loadCompanyDetails() {
+    const companySelect = document.getElementById('loadsheet-company');
+    if (!companySelect) return;
+    
+    const companyId = companySelect.value;
+    if (!companyId) return;
+    
+    const selectedOption = companySelect.options[companySelect.selectedIndex];
+    const rate = selectedOption.getAttribute('data-rate');
+    const paymentTerms = selectedOption.getAttribute('data-payment-terms');
+    
+    if (rate) {
+        document.getElementById('rate-per-pallet').value = rate;
+        calculateTotal();
+    }
+}
+
+// Statement Functions
+function showGenerateStatementForm() {
+    const modal = document.getElementById('generate-statement-modal');
+    if (!modal) return;
+    
+    const form = document.getElementById('generate-statement-form');
+    if (form) {
+        form.reset();
+        document.getElementById('statement-month').value = new Date().toISOString().slice(0, 7);
+    }
+    
+    modal.style.display = 'flex';
+}
+
+function closeGenerateStatementModal() {
+    const modal = document.getElementById('generate-statement-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function handleGenerateStatementSubmit(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalText = submitButton.textContent;
+    
+    submitButton.disabled = true;
+    submitButton.textContent = 'Generating...';
+    
+    const data = new URLSearchParams();
+    for (let [key, value] of formData.entries()) {
+        data.append(key, value);
+    }
+    data.append('action', 'generate_statement');
+    
+    fetch('?page=ajax', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: data.toString()
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(`Statement ${data.statement_number} generated successfully!`, 'success');
+            // Close both modals
+            closeStatementModal();
+            closeGenerateStatementModal();
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showNotification('Error generating statement: ' + (data.message || 'Unknown error'), 'error');
+            submitButton.disabled = false;
+            submitButton.textContent = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error generating statement:', error);
+        showNotification('Error generating statement. Please try again.', 'error');
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
+    });
+}
+
+function generateMonthlyStatement() {
+    // Check if statement-modal exists (invoices page)
+    const statementModal = document.getElementById('statement-modal');
+    if (statementModal) {
+        statementModal.style.display = 'flex';
+        const form = document.getElementById('statement-form');
+        if (form) {
+            form.reset();
+            const monthInput = document.getElementById('statement-month');
+            if (monthInput) {
+                monthInput.value = new Date().toISOString().slice(0, 7);
+            }
+        }
+    } else {
+        // Fall back to generate-statement-modal (statements page)
+        showGenerateStatementForm();
+    }
+}
+
+function viewStatement(statementId) {
+    fetch('?page=ajax&action=get_statement_details&statement_id=' + statementId)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.statement) {
+                const stmt = data.statement;
+                const modal = document.getElementById('statement-details-modal');
+                const content = document.getElementById('statement-details-content');
+                
+                if (!modal || !content) return;
+                
+                const statementNumber = 'STMT' + new Date(stmt.statement_date).getFullYear() + 
+                    String(new Date(stmt.statement_date).getMonth() + 1).padStart(2, '0') + 
+                    String(stmt.id).padStart(3, '0');
+                const period = new Date(stmt.statement_period + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                
+                let itemsHtml = '';
+                if (stmt.items && stmt.items.length > 0) {
+                    itemsHtml = '<table style="width: 100%; border-collapse: collapse; margin: 20px 0;"><thead><tr><th style="border: 1px solid #ddd; padding: 8px;">Invoice #</th><th style="border: 1px solid #ddd; padding: 8px;">Date</th><th style="border: 1px solid #ddd; padding: 8px;">Amount</th><th style="border: 1px solid #ddd; padding: 8px;">Status</th></tr></thead><tbody>';
+                    stmt.items.forEach(item => {
+                        itemsHtml += `<tr><td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(item.invoice_number)}</td><td style="border: 1px solid #ddd; padding: 8px;">${new Date(item.invoice_date).toLocaleDateString()}</td><td style="border: 1px solid #ddd; padding: 8px;">R ${parseFloat(item.amount).toFixed(2)}</td><td style="border: 1px solid #ddd; padding: 8px;">${item.payment_status}</td></tr>`;
+                    });
+                    itemsHtml += '</tbody></table>';
+                }
+                
+                content.innerHTML = `
+                    <div style="line-height: 1.8;">
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Statement Number:</strong><br>
+                            ${statementNumber}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Company:</strong><br>
+                            ${escapeHtml(stmt.company_name)}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Period:</strong><br>
+                            ${period}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Opening Balance:</strong><br>
+                            R ${parseFloat(stmt.opening_balance).toFixed(2)}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Total Charges:</strong><br>
+                            R ${parseFloat(stmt.total_charges).toFixed(2)}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Total Payments:</strong><br>
+                            R ${parseFloat(stmt.total_payments).toFixed(2)}
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Closing Balance:</strong><br>
+                            R ${parseFloat(stmt.closing_balance).toFixed(2)}
+                        </div>
+                        ${itemsHtml}
+                    </div>
+                `;
+                
+                modal.style.display = 'flex';
+            } else {
+                showNotification('Error loading statement: ' + (data.message || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading statement:', error);
+            showNotification('Error loading statement. Please try again.', 'error');
+        });
+}
+
+function closeStatementDetailsModal() {
+    const modal = document.getElementById('statement-details-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function downloadStatement(statementId) {
+    window.location.href = '?page=ajax&action=download_statement&statement_id=' + statementId;
+}
+
+let currentStatementData = null;
+
+function sendStatementEmail(statementId) {
+    if (!statementId) {
+        // Called from dialog button, use currentStatementData
+        sendStatementEmailFromDialog();
+        return;
+    }
+    
+    fetch('?page=ajax&action=get_statement_details&statement_id=' + statementId)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.statement) {
+                currentStatementData = { statement_id: statementId };
+                const stmt = data.statement;
+                const dialog = document.getElementById('email-dialog');
+                const detailsElement = document.getElementById('statement-details') || document.getElementById('invoice-details');
+                
+                if (dialog && detailsElement) {
+                    const statementNumber = 'STMT' + new Date(stmt.statement_date).getFullYear() + 
+                        String(new Date(stmt.statement_date).getMonth() + 1).padStart(2, '0') + 
+                        String(stmt.id).padStart(3, '0');
+                    
+                    detailsElement.innerHTML = `
+                        <p><strong>Statement ${statementNumber}</strong></p>
+                        <p>Company: ${escapeHtml(stmt.company_name)}</p>
+                        <p>Closing Balance: R ${parseFloat(stmt.closing_balance).toFixed(2)}</p>
+                    `;
+                    
+                    // Update dialog title if it exists
+                    const title = dialog.querySelector('h3');
+                    if (title) title.textContent = 'Send Statement to Customer';
+                    
+                    // Update send button onclick
+                    const sendButton = dialog.querySelector('.btn-primary');
+                    if (sendButton) {
+                        sendButton.setAttribute('onclick', 'sendStatementEmail()');
+                    }
+                    
+                    dialog.style.display = 'flex';
+                    
+                    setTimeout(() => {
+                        const emailInput = document.getElementById('email-address');
+                        if (emailInput) emailInput.focus();
+                    }, 100);
+                }
+            } else {
+                showNotification('Error loading statement: ' + (data.message || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading statement:', error);
+            showNotification('Error loading statement. Please try again.', 'error');
+        });
+}
+
+function sendStatementEmailFromDialog() {
+    const emailAddress = document.getElementById('email-address').value.trim();
+    
+    if (!emailAddress) {
+        alert('Please enter an email address');
+        return;
+    }
+    
+    if (!currentStatementData) {
+        alert('No statement data available');
+        return;
+    }
+    
+    const sendButton = document.querySelector('#email-dialog .btn-primary');
+    const originalText = sendButton.textContent;
+    sendButton.disabled = true;
+    sendButton.textContent = 'Sending...';
+    
+    fetch('?page=ajax', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `action=send_statement_email&statement_id=${currentStatementData.statement_id}&email_address=${encodeURIComponent(emailAddress)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(`Statement sent successfully to ${emailAddress}`, 'success');
+            closeEmailDialog();
+            currentStatementData = null;
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showNotification('Error sending statement: ' + data.message, 'error');
+            sendButton.disabled = false;
+            sendButton.textContent = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error sending statement email:', error);
+        showNotification('Error sending statement. Please try again.', 'error');
+        sendButton.disabled = false;
+        sendButton.textContent = originalText;
+    });
+}
+
+function closeStatementModal() {
+    // Close statement-modal (invoices page)
+    const statementModal = document.getElementById('statement-modal');
+    if (statementModal) {
+        statementModal.style.display = 'none';
+    }
+    // Also close generate-statement-modal (statements page) if it exists
+    closeGenerateStatementModal();
+}
+
+// Export Functions
+function exportInvoices() {
+    showNotification('Export functionality coming soon!', 'info');
+}
+
+function exportStatements() {
+    showNotification('Export functionality coming soon!', 'info');
+}
+
 // Handle Enter key in email input
 document.addEventListener('keydown', function(event) {
     if (event.key === 'Enter' && event.target.id === 'email-address') {
-        sendInvoiceEmail();
+        if (currentInvoiceData) {
+            sendInvoiceEmail();
+        } else if (currentStatementData) {
+            sendStatementEmailFromDialog();
+        }
     }
     
     if (event.key === 'Escape') {
@@ -904,5 +1502,9 @@ document.addEventListener('keydown', function(event) {
         closeContractorModal();
         closeCompanyDetailsModal();
         closeCompanyModal();
+        closeInvoiceDetailsModal();
+        closeStatementDetailsModal();
+        closeGenerateStatementModal();
+        closeStatementModal();
     }
 });

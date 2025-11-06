@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice INV202401001</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: #f5f5f5;
+        }
+        .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            border-bottom: 2px solid #007cba;
+            padding-bottom: 20px;
+        }
+        .header h1 {
+            color: #007cba;
+            margin: 0;
+            font-size: 28px;
+        }
+        .header h2 {
+            color: #333;
+            margin: 5px 0 0 0;
+            font-size: 18px;
+        }
+        .company-info { 
+            float: right; 
+            text-align: right; 
+            margin-bottom: 20px;
+        }
+        .company-info h3 {
+            color: #007cba;
+            margin: 0 0 10px 0;
+        }
+        .invoice-details { 
+            margin: 20px 0; 
+            clear: both;
+        }
+        .invoice-details h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .invoice-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin: 20px 0; 
+        }
+        .invoice-table th, .invoice-table td { 
+            border: 1px solid #ddd; 
+            padding: 12px; 
+            text-align: left; 
+        }
+        .invoice-table th { 
+            background-color: #007cba; 
+            color: white;
+            font-weight: bold;
+        }
+        .invoice-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .total-section { 
+            text-align: right; 
+            margin-top: 20px; 
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .total-section p {
+            margin: 5px 0;
+            font-size: 16px;
+        }
+        .total-amount {
+            font-size: 20px;
+            font-weight: bold;
+            color: #007cba;
+            border-top: 2px solid #007cba;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+        .footer { 
+            margin-top: 40px; 
+            text-align: center; 
+            font-size: 12px; 
+            color: #666; 
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-paid {
+            background: #d4edda;
+            color: #155724;
+        }
+        @media print { 
+            body { margin: 0; background: white; }
+            .invoice-container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <div class="header">
+            <h1>INVOICE</h1>
+            <h2>INV202401001</h2>
+        </div>
+        
+        <div class="company-info">
+            <h3>Logistics Company</h3>
+            <p>Your Company Name<br>
+            Your Address<br>
+            Your City, Postal Code<br>
+            Phone: Your Phone<br>
+            Email: Your Email</p>
+        </div>
+        
+        <div class="invoice-details">
+            <h3>Bill To:</h3>
+            <p><strong>Spar Distribution</strong><br>123 Main Street, Johannesburg, 2000<br>Contact: John J Smith<br>Email: john@spar.co.za<br>Phone: 011-123-4567<br>VAT Number: VAT123456789<br></p>
+        </div>
+        
+        <div class="invoice-details">
+            <p><strong>Invoice Date:</strong> January 15, 2024</p>
+            <p><strong>Due Date:</strong> February 14, 2024</p>
+            <p><strong>Payment Status:</strong> <span class="status-badge status-paid">Paid</span></p>
+        </div>
+        
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Pickup Location</th>
+                    <th>Delivery Location</th>
+                    <th>Pallets</th>
+                    <th>Weight (kg)</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Grocery items and household goods</td>
+                    <td>Spar Warehouse, Johannesburg</td>
+                    <td>Spar Store, Pretoria</td>
+                    <td>5</td>
+                    <td>1250.50</td>
+                    <td>R 2,250.00</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="total-section">
+            <p><strong>Subtotal: R 2,250.00</strong></p>
+            <p>VAT (15.00%): R 337.50</p>
+            <p class="total-amount">Total Amount: R 2,587.50</p>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Thank you for your business!</strong></p>
+            <p>Payment terms:  days from invoice date</p>
+            <p>For any queries, please contact us at your-email@company.com</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -85,7 +85,7 @@
                                 <?php foreach ($invoices as $invoice): ?>
                                     <tr data-invoice-id="<?php echo $invoice['id']; ?>" class="invoice-row">
                                         <td>
-                                            <a href="#" onclick="viewInvoice(<?php echo $invoice['id']; ?>)">
+                                            <a href="#" onclick="viewInvoice(<?php echo $invoice['id']; ?>); return false;">
                                                 <?php echo htmlspecialchars($invoice['invoice_number']); ?>
                                             </a>
                                         </td>

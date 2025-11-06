@@ -89,7 +89,7 @@
                                 <?php foreach ($statements as $statement): ?>
                                     <tr data-statement-id="<?php echo $statement['id']; ?>">
                                         <td>
-                                            <a href="#" onclick="viewStatement(<?php echo $statement['id']; ?>)">
+                                            <a href="#" onclick="viewStatement(<?php echo $statement['id']; ?>); return false;">
                                                 <?php echo htmlspecialchars($statement['statement_number']); ?>
                                             </a>
                                         </td>
