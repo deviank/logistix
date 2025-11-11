@@ -1,55 +1,124 @@
 <?php
 /**
- * Email Sender Class
+ * Email Sender Class using PHPMailer
  */
+
+// Check if PHPMailer is installed via Composer
+if (file_exists(ROOT_PATH . 'vendor/autoload.php')) {
+    require_once ROOT_PATH . 'vendor/autoload.php';
+} else {
+    // Fallback: try to load PHPMailer manually if not using Composer
+    // You can download PHPMailer and place it in a 'phpmailer' folder
+    $phpmailerPath = ROOT_PATH . 'phpmailer/src/Exception.php';
+    if (file_exists($phpmailerPath)) {
+        require_once ROOT_PATH . 'phpmailer/src/Exception.php';
+        require_once ROOT_PATH . 'phpmailer/src/PHPMailer.php';
+        require_once ROOT_PATH . 'phpmailer/src/SMTP.php';
+    }
+}
+
+// Use PHPMailer classes
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 class EmailSender {
     
+    /**
+     * Get PHPMailer instance with SMTP configuration
+     */
+    private function getMailer() {
+        $mail = new PHPMailer(true);
+        
+        try {
+            // Check if SMTP is enabled
+            if (!defined('SMTP_ENABLED') || !SMTP_ENABLED) {
+                throw new Exception('SMTP is not enabled. Please configure email settings in config/config.php');
+            }
+            
+            // Server settings
+            $mail->isSMTP();
+            $mail->Host = defined('SMTP_HOST') ? SMTP_HOST : 'smtp.gmail.com';
+            $mail->SMTPAuth = true;
+            $mail->Username = defined('SMTP_USERNAME') ? SMTP_USERNAME : '';
+            $mail->Password = defined('SMTP_PASSWORD') ? SMTP_PASSWORD : '';
+            $mail->SMTPSecure = defined('SMTP_SECURE') ? SMTP_SECURE : 'tls';
+            $mail->Port = defined('SMTP_PORT') ? SMTP_PORT : 587;
+            
+            // Enable verbose debug output (for testing - remove in production)
+            // $mail->SMTPDebug = 2;
+            
+            // Character encoding
+            $mail->CharSet = 'UTF-8';
+            
+            // From address
+            $fromEmail = defined('SMTP_FROM_EMAIL') ? SMTP_FROM_EMAIL : (defined('COMPANY_EMAIL') ? COMPANY_EMAIL : 'noreply@logisticscompany.co.za');
+            $fromName = defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : (defined('COMPANY_NAME') ? COMPANY_NAME : 'Logistics Management System');
+            $mail->setFrom($fromEmail, $fromName);
+            
+            return $mail;
+        } catch (Exception $e) {
+            throw new Exception('Failed to initialize email: ' . $e->getMessage());
+        }
+    }
+    
     public function sendInvoiceEmail($invoiceId, $emailAddress, $db) {
-        // Get invoice details
-        $invoice = $db->fetchOne("
-            SELECT i.*, c.name as company_name, c.contact_person, c.email as company_email
-            FROM invoices i 
-            JOIN companies c ON i.company_id = c.id 
-            WHERE i.id = ?
-        ", [$invoiceId]);
-        
-        if (!$invoice) {
-            return false;
-        }
-        
-        // Generate PDF
-        $pdfGenerator = new PDFGenerator();
-        $pdfData = $pdfGenerator->generateInvoicePDF($invoiceId, $db);
-        
-        if (!$pdfData) {
-            return false;
-        }
-        
-        // Email subject and content
-        $subject = 'Invoice ' . $invoice['invoice_number'] . ' - ' . $invoice['company_name'];
-        
-        $message = $this->getInvoiceEmailTemplate($invoice);
-        
-        // Set headers
-        $headers = [
-            'From: Logistics Company <noreply@yourcompany.com>',
-            'Reply-To: billing@yourcompany.com',
-            'Content-Type: text/html; charset=UTF-8'
-        ];
-        
-        // Send email (using PHP mail function - in production, use a proper email service)
-        $sent = mail($emailAddress, $subject, $message, implode("\r\n", $headers));
-        
-        if ($sent) {
+        try {
+            // Get invoice details
+            $invoice = $db->fetchOne("
+                SELECT i.*, c.name as company_name, c.contact_person, c.email as company_email
+                FROM invoices i 
+                JOIN companies c ON i.company_id = c.id 
+                WHERE i.id = ?
+            ", [$invoiceId]);
+            
+            if (!$invoice) {
+                throw new Exception('Invoice not found');
+            }
+            
+            // Generate PDF
+            $pdfGenerator = new PDFGenerator();
+            $pdfData = $pdfGenerator->generateInvoicePDF($invoiceId, $db);
+            
+            if (!$pdfData) {
+                throw new Exception('Failed to generate invoice PDF');
+            }
+            
+            // Get PHPMailer instance
+            $mail = $this->getMailer();
+            
+            // Recipients
+            $mail->addAddress($emailAddress, $invoice['company_name']);
+            
+            // Add reply-to
+            if (!empty($invoice['company_email'])) {
+                $mail->addReplyTo($invoice['company_email'], $invoice['company_name']);
+            }
+            
+            // Content
+            $mail->isHTML(true);
+            $mail->Subject = 'Invoice ' . $invoice['invoice_number'] . ' - ' . $invoice['company_name'];
+            $mail->Body = $this->getInvoiceEmailTemplate($invoice);
+            $mail->AltBody = strip_tags($this->getInvoiceEmailTemplate($invoice));
+            
+            // Attach PDF if file exists
+            if (isset($pdfData['filepath']) && file_exists($pdfData['filepath'])) {
+                $mail->addAttachment($pdfData['filepath'], 'Invoice-' . $invoice['invoice_number'] . '.html');
+            }
+            
+            // Send email
+            $mail->send();
+            
             // Update invoice to track email sent
             $db->update('invoices', [
                 'email_sent_date' => date('Y-m-d H:i:s'),
                 'email_sent_to' => $emailAddress
             ], 'id = ?', [$invoiceId]);
+            
+            return true;
+        } catch (Exception $e) {
+            error_log('Invoice email error: ' . $e->getMessage());
+            throw $e;
         }
-        
-        return $sent;
     }
     
     private function getInvoiceEmailTemplate($invoice) {
@@ -107,51 +176,66 @@ class EmailSender {
     }
     
     public function sendStatementEmail($statementId, $emailAddress, $db) {
-        // Get statement details
-        $statement = $db->fetchOne("
-            SELECT s.*, c.name as company_name, c.contact_person, c.email as company_email
-            FROM statements s 
-            JOIN companies c ON s.company_id = c.id 
-            WHERE s.id = ?
-        ", [$statementId]);
-        
-        if (!$statement) {
-            return false;
-        }
-        
-        // Generate PDF
-        $pdfGenerator = new PDFGenerator();
-        $pdfData = $pdfGenerator->generateStatementPDF($statementId, $db);
-        
-        if (!$pdfData) {
-            return false;
-        }
-        
-        // Email subject and content
-        $statementNumber = 'STMT' . date('Ym', strtotime($statement['statement_date'])) . str_pad($statementId, 3, '0', STR_PAD_LEFT);
-        $subject = 'Monthly Statement ' . $statementNumber . ' - ' . $statement['company_name'];
-        
-        $message = $this->getStatementEmailTemplate($statement, $statementNumber);
-        
-        // Set headers
-        $headers = [
-            'From: Logistics Company <noreply@yourcompany.com>',
-            'Reply-To: billing@yourcompany.com',
-            'Content-Type: text/html; charset=UTF-8'
-        ];
-        
-        // Send email (using PHP mail function - in production, use a proper email service)
-        $sent = mail($emailAddress, $subject, $message, implode("\r\n", $headers));
-        
-        if ($sent) {
+        try {
+            // Get statement details
+            $statement = $db->fetchOne("
+                SELECT s.*, c.name as company_name, c.contact_person, c.email as company_email
+                FROM statements s 
+                JOIN companies c ON s.company_id = c.id 
+                WHERE s.id = ?
+            ", [$statementId]);
+            
+            if (!$statement) {
+                throw new Exception('Statement not found');
+            }
+            
+            // Generate PDF
+            $pdfGenerator = new PDFGenerator();
+            $pdfData = $pdfGenerator->generateStatementPDF($statementId, $db);
+            
+            if (!$pdfData) {
+                throw new Exception('Failed to generate statement PDF');
+            }
+            
+            // Get PHPMailer instance
+            $mail = $this->getMailer();
+            
+            // Recipients
+            $mail->addAddress($emailAddress, $statement['company_name']);
+            
+            // Add reply-to
+            if (!empty($statement['company_email'])) {
+                $mail->addReplyTo($statement['company_email'], $statement['company_name']);
+            }
+            
+            // Email subject and content
+            $statementNumber = 'STMT' . date('Ym', strtotime($statement['statement_date'])) . str_pad($statementId, 3, '0', STR_PAD_LEFT);
+            
+            // Content
+            $mail->isHTML(true);
+            $mail->Subject = 'Monthly Statement ' . $statementNumber . ' - ' . $statement['company_name'];
+            $mail->Body = $this->getStatementEmailTemplate($statement, $statementNumber);
+            $mail->AltBody = strip_tags($this->getStatementEmailTemplate($statement, $statementNumber));
+            
+            // Attach PDF if file exists
+            if (isset($pdfData['filepath']) && file_exists($pdfData['filepath'])) {
+                $mail->addAttachment($pdfData['filepath'], 'Statement-' . $statementNumber . '.html');
+            }
+            
+            // Send email
+            $mail->send();
+            
             // Update statement to track email sent
             $db->update('statements', [
                 'email_sent_date' => date('Y-m-d H:i:s'),
                 'email_sent' => 1
             ], 'id = ?', [$statementId]);
+            
+            return true;
+        } catch (Exception $e) {
+            error_log('Statement email error: ' . $e->getMessage());
+            throw $e;
         }
-        
-        return $sent;
     }
     
     private function getStatementEmailTemplate($statement, $statementNumber) {

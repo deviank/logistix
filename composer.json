@@ -1,0 +1,13 @@
+{
+    "name": "logistics-app/email",
+    "description": "Logistics Management System with PHPMailer",
+    "require": {
+        "phpmailer/phpmailer": "^6.9"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "classes/"
+        }
+    }
+}
+

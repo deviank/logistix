@@ -40,4 +40,19 @@ define('COMPANY_PHONE', '+27 (0)11 123 4567');
 define('COMPANY_EMAIL', 'info@logisticscompany.co.za');
 define('COMPANY_VAT_NUMBER', 'VAT123456789');
 define('COMPANY_REGISTRATION', 'Reg: 2023/123456/07');
+
+// Email Configuration (PHPMailer)
+// For Gmail testing:
+// 1. Use your Gmail address as SMTP_USERNAME
+// 2. Generate an "App Password" from your Google Account settings
+// 3. Go to: Google Account > Security > 2-Step Verification > App passwords
+// 4. Use that app password as SMTP_PASSWORD
+define('SMTP_ENABLED', true);
+define('SMTP_HOST', 'smtp.gmail.com');
+define('SMTP_PORT', 587);
+define('SMTP_SECURE', 'tls'); // 'tls' or 'ssl'
+define('SMTP_USERNAME', 'your-email@gmail.com'); // Your Gmail address
+define('SMTP_PASSWORD', 'your-app-password'); // Gmail App Password (not your regular password)
+define('SMTP_FROM_EMAIL', 'your-email@gmail.com'); // Email address to send from
+define('SMTP_FROM_NAME', 'Logistics Management System'); // Name to display as sender
 ?>

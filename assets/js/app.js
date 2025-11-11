@@ -1524,7 +1524,21 @@ function sendStatementEmailFromDialog() {
         },
         body: `action=send_statement_email&statement_id=${currentStatementData.statement_id}&email_address=${encodeURIComponent(emailAddress)}`
     })
-    .then(response => response.json())
+    .then(response => {
+        // Check if response is ok
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        // Try to parse as JSON
+        return response.text().then(text => {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('Response was not JSON:', text);
+                throw new Error('Invalid response from server');
+            }
+        });
+    })
     .then(data => {
         if (data.success) {
             showNotification(`Statement sent successfully to ${emailAddress}`, 'success');
@@ -1534,14 +1548,14 @@ function sendStatementEmailFromDialog() {
                 location.reload();
             }, 1500);
         } else {
-            showNotification('Error sending statement: ' + data.message, 'error');
+            showNotification('Error sending statement: ' + (data.message || 'Unknown error'), 'error');
             sendButton.disabled = false;
             sendButton.textContent = originalText;
         }
     })
     .catch(error => {
         console.error('Error sending statement email:', error);
-        showNotification('Error sending statement. Please try again.', 'error');
+        showNotification('Error sending statement: ' + error.message + '. Please check your email configuration.', 'error');
         sendButton.disabled = false;
         sendButton.textContent = originalText;
     });

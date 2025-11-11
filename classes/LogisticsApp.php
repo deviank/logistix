@@ -79,6 +79,9 @@ class LogisticsApp {
     }
     
     public function handleAjax() {
+        // Set JSON header
+        header('Content-Type: application/json');
+        
         $action = $_POST['action'] ?? $_GET['action'] ?? '';
         
         switch ($action) {
@@ -826,13 +829,23 @@ class LogisticsApp {
             return;
         }
         
-        $emailSender = new EmailSender();
-        $sent = $emailSender->sendStatementEmail($statementId, $emailAddress, $this->db);
+        // Validate email address
+        if (!filter_var($emailAddress, FILTER_VALIDATE_EMAIL)) {
+            echo json_encode(['success' => false, 'message' => 'Invalid email address']);
+            return;
+        }
         
-        if ($sent) {
-            echo json_encode(['success' => true, 'message' => 'Statement sent successfully']);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to send statement email']);
+        try {
+            $emailSender = new EmailSender();
+            $sent = $emailSender->sendStatementEmail($statementId, $emailAddress, $this->db);
+            
+            if ($sent) {
+                echo json_encode(['success' => true, 'message' => 'Statement sent successfully']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to send statement email. Please check your email configuration.']);
+            }
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
         }
     }
 }
