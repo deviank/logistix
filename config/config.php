@@ -46,13 +46,13 @@ define('COMPANY_REGISTRATION', 'Reg: 2023/123456/07');
 // 1. Use your Gmail address as SMTP_USERNAME
 // 2. Generate an "App Password" from your Google Account settings
 // 3. Go to: Google Account > Security > 2-Step Verification > App passwords
-// 4. Use that app password as SMTP_PASSWORD
+// 4. Use that app password as SMTP_PASSWORD (remove spaces!)
 define('SMTP_ENABLED', true);
 define('SMTP_HOST', 'smtp.gmail.com');
 define('SMTP_PORT', 587);
 define('SMTP_SECURE', 'tls'); // 'tls' or 'ssl'
-define('SMTP_USERNAME', 'your-email@gmail.com'); // Your Gmail address
-define('SMTP_PASSWORD', 'your-app-password'); // Gmail App Password (not your regular password)
-define('SMTP_FROM_EMAIL', 'your-email@gmail.com'); // Email address to send from
+define('SMTP_USERNAME', 'forza9882@gmail.com'); // Your Gmail address
+define('SMTP_PASSWORD', 'ysdsbjmxivorqiqn'); // Gmail App Password (remove spaces - should be 16 characters without spaces)
+define('SMTP_FROM_EMAIL', 'forza9882@gmail.com'); // Email address to send from
 define('SMTP_FROM_NAME', 'Logistics Management System'); // Name to display as sender
 ?>

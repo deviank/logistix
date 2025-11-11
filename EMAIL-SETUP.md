@@ -78,9 +78,9 @@ define('SMTP_ENABLED', true);
 define('SMTP_HOST', 'smtp.gmail.com');
 define('SMTP_PORT', 587);
 define('SMTP_SECURE', 'tls');
-define('SMTP_USERNAME', 'your-email@gmail.com'); // Your Gmail address
-define('SMTP_PASSWORD', 'your-16-char-app-password'); // The App Password from Step 2
-define('SMTP_FROM_EMAIL', 'your-email@gmail.com'); // Same as SMTP_USERNAME
+define('SMTP_USERNAME', 'forza9882@gmail.com'); // Your Gmail address
+define('SMTP_PASSWORD', 'ysds bjmx ivor qiqn'); // The App Password from Step 2
+define('SMTP_FROM_EMAIL', 'forza9882@gmail.com'); // Same as SMTP_USERNAME
 define('SMTP_FROM_NAME', 'Logistics Management System');
 ```
 

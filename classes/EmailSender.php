@@ -35,16 +35,28 @@ class EmailSender {
                 throw new Exception('SMTP is not enabled. Please configure email settings in config/config.php');
             }
             
+            // Validate required settings
+            if (!defined('SMTP_USERNAME') || empty(SMTP_USERNAME) || SMTP_USERNAME === 'your-email@gmail.com') {
+                throw new Exception('SMTP_USERNAME is not configured. Please update config/config.php with your Gmail address.');
+            }
+            
+            if (!defined('SMTP_PASSWORD') || empty(SMTP_PASSWORD) || SMTP_PASSWORD === 'your-app-password') {
+                throw new Exception('SMTP_PASSWORD is not configured. Please update config/config.php with your Gmail App Password.');
+            }
+            
             // Server settings
             $mail->isSMTP();
             $mail->Host = defined('SMTP_HOST') ? SMTP_HOST : 'smtp.gmail.com';
             $mail->SMTPAuth = true;
             $mail->Username = defined('SMTP_USERNAME') ? SMTP_USERNAME : '';
-            $mail->Password = defined('SMTP_PASSWORD') ? SMTP_PASSWORD : '';
+            // Remove spaces from password (Gmail App Passwords should be entered without spaces)
+            $password = defined('SMTP_PASSWORD') ? str_replace(' ', '', SMTP_PASSWORD) : '';
+            $mail->Password = $password;
             $mail->SMTPSecure = defined('SMTP_SECURE') ? SMTP_SECURE : 'tls';
             $mail->Port = defined('SMTP_PORT') ? SMTP_PORT : 587;
             
             // Enable verbose debug output (for testing - remove in production)
+            // Uncomment the line below to see detailed SMTP debug information
             // $mail->SMTPDebug = 2;
             
             // Character encoding
