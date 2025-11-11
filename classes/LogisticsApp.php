@@ -69,6 +69,7 @@ class LogisticsApp {
             SELECT s.*, c.name as company_name,
                    CONCAT('STMT', YEAR(s.statement_date), LPAD(MONTH(s.statement_date), 2, '0'), LPAD(s.id, 3, '0')) as statement_number,
                    s.statement_period as statement_month,
+                   s.total_charges as total_amount,
                    CASE WHEN s.closing_balance > 0 THEN 'pending' ELSE 'paid' END as status
             FROM statements s 
             JOIN companies c ON s.company_id = c.id 

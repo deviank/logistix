@@ -114,6 +114,7 @@
                                             <div class="action-buttons">
                                                 <button class="btn btn-sm btn-info" onclick="viewInvoice(<?php echo $invoice['id']; ?>)">View</button>
                                                 <button class="btn btn-sm btn-secondary" onclick="downloadInvoice(<?php echo $invoice['id']; ?>)">PDF</button>
+                                                <button class="btn btn-sm btn-warning" onclick="generateStatementFromInvoice(<?php echo $invoice['id']; ?>, <?php echo $invoice['company_id']; ?>, '<?php echo date('Y-m', strtotime($invoice['invoice_date'])); ?>')" title="Generate Statement for this Company">Statement</button>
                                                 <?php if ($invoice['payment_status'] === 'pending'): ?>
                                                     <button class="btn btn-sm btn-success mark-paid-btn" data-invoice-id="<?php echo $invoice['id']; ?>">Mark Paid</button>
                                                     <button class="btn btn-sm btn-primary send-email-btn" data-invoice-id="<?php echo $invoice['id']; ?>">Send Email</button>
@@ -204,7 +205,10 @@
     <!-- Generate Statement Modal -->
     <div id="statement-modal" class="modal" style="display: none;">
         <div class="modal-content">
-            <h3>Generate Monthly Statement</h3>
+            <div class="modal-header">
+                <h3>Generate Monthly Statement</h3>
+                <button class="close-btn" onclick="closeStatementModal()">&times;</button>
+            </div>
             <form id="statement-form">
                 <div class="form-group">
                     <label for="statement-company">Company:</label>

@@ -1324,6 +1324,44 @@ function generateMonthlyStatement() {
     }
 }
 
+function generateStatementFromInvoice(invoiceId, companyId, month) {
+    // Open the statement modal and pre-populate with company and month
+    const statementModal = document.getElementById('statement-modal');
+    if (statementModal) {
+        statementModal.style.display = 'flex';
+        const form = document.getElementById('statement-form');
+        if (form) {
+            // Pre-populate company
+            const companySelect = document.getElementById('statement-company');
+            if (companySelect) {
+                companySelect.value = companyId;
+            }
+            // Pre-populate month
+            const monthInput = document.getElementById('statement-month');
+            if (monthInput) {
+                monthInput.value = month;
+            }
+        }
+    } else {
+        // Fall back to generate-statement-modal (statements page)
+        const generateModal = document.getElementById('generate-statement-modal');
+        if (generateModal) {
+            generateModal.style.display = 'flex';
+            const form = document.getElementById('generate-statement-form');
+            if (form) {
+                const companySelect = document.getElementById('statement-company');
+                if (companySelect) {
+                    companySelect.value = companyId;
+                }
+                const monthInput = document.getElementById('statement-month');
+                if (monthInput) {
+                    monthInput.value = month;
+                }
+            }
+        }
+    }
+}
+
 function viewStatement(statementId) {
     fetch('?page=ajax&action=get_statement_details&statement_id=' + statementId)
         .then(response => response.json())
