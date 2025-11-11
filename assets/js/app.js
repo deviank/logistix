@@ -536,6 +536,48 @@ function deactivateCompany(companyId) {
     });
 }
 
+function deleteCompany(companyId) {
+    if (!confirm('Are you sure you want to delete this company? This action cannot be undone.')) {
+        return;
+    }
+    
+    const formData = new URLSearchParams();
+    formData.append('action', 'delete_company');
+    formData.append('company_id', companyId);
+    
+    fetch('?page=ajax', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString()
+    })
+    .then(response => response.text())
+    .then(text => {
+        let data = null;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('Error parsing response:', text);
+            showNotification('Error deleting company', 'error');
+            return;
+        }
+        
+        if (data.success) {
+            showNotification(data.message || 'Company deleted successfully!', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            showNotification('Error: ' + (data.message || 'Failed to delete company'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting company:', error);
+        showNotification('Error deleting company. Please try again.', 'error');
+    });
+}
+
 function toggleInactiveCompanies() {
     const currentUrl = new URL(window.location);
     const showInactive = currentUrl.searchParams.get('show_inactive') === '1';

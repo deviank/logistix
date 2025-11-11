@@ -111,6 +111,9 @@ class LogisticsApp {
             case 'toggle_company_status':
                 $this->toggleCompanyStatus();
                 break;
+            case 'delete_company':
+                $this->deleteCompany();
+                break;
             case 'get_invoice_details':
                 $this->getInvoiceDetails();
                 break;
@@ -550,6 +553,35 @@ class LogisticsApp {
             ]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Failed to update company status']);
+        }
+    }
+    
+    public function deleteCompany() {
+        $companyId = $_POST['company_id'] ?? 0;
+        
+        if (!$companyId) {
+            echo json_encode(['success' => false, 'message' => 'Company ID required']);
+            return;
+        }
+        
+        // Get company status
+        $company = $this->db->fetchOne("SELECT status FROM companies WHERE id = ?", [$companyId]);
+        if (!$company) {
+            echo json_encode(['success' => false, 'message' => 'Company not found']);
+            return;
+        }
+        
+        // Allow deletion of inactive companies
+        if ($company['status'] === 'inactive') {
+            $deleted = $this->db->delete('companies', 'id = ?', [$companyId]);
+            
+            if ($deleted) {
+                echo json_encode(['success' => true, 'message' => 'Company deleted successfully']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to delete company']);
+            }
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Only inactive companies can be deleted']);
         }
     }
     

@@ -31,4 +31,13 @@ define('VAT_RATE', 15);
 
 // Default payment terms (days)
 define('DEFAULT_PAYMENT_TERMS', 30);
+
+// Company branding for PDFs
+define('COMPANY_NAME', 'Logistics Management System');
+define('COMPANY_ADDRESS', '123 Business Street, Industrial Area');
+define('COMPANY_CITY', 'Johannesburg, 2000');
+define('COMPANY_PHONE', '+27 (0)11 123 4567');
+define('COMPANY_EMAIL', 'info@logisticscompany.co.za');
+define('COMPANY_VAT_NUMBER', 'VAT123456789');
+define('COMPANY_REGISTRATION', 'Reg: 2023/123456/07');
 ?>

@@ -79,6 +79,7 @@
                                         <button class="btn btn-sm btn-warning" onclick="deactivateCompany(<?php echo $company['id']; ?>)">Deactivate</button>
                                     <?php else: ?>
                                         <button class="btn btn-sm btn-success" onclick="activateCompany(<?php echo $company['id']; ?>)">Activate</button>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteCompany(<?php echo $company['id']; ?>)">Delete</button>
                                     <?php endif; ?>
                                 </div>
                             </div>
