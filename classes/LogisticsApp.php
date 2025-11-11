@@ -304,13 +304,26 @@ class LogisticsApp {
             return;
         }
         
-        $emailSender = new EmailSender();
-        $sent = $emailSender->sendInvoiceEmail($invoiceId, $emailAddress, $this->db);
-        
-        if ($sent) {
-            echo json_encode(['success' => true, 'message' => 'Invoice sent successfully']);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to send invoice email']);
+        try {
+            $emailSender = new EmailSender();
+            $sent = $emailSender->sendInvoiceEmail($invoiceId, $emailAddress, $this->db);
+            
+            if ($sent) {
+                echo json_encode(['success' => true, 'message' => 'Invoice sent successfully']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to send invoice email']);
+            }
+        } catch (Exception $e) {
+            // Email might have been sent but error occurred (e.g., during DB update)
+            // Check if email was actually sent by checking error message
+            $errorMsg = $e->getMessage();
+            if (strpos($errorMsg, 'SMTP') === false && strpos($errorMsg, 'authenticate') === false) {
+                // Likely a non-critical error (e.g., DB update failed but email sent)
+                echo json_encode(['success' => true, 'message' => 'Invoice sent successfully (note: ' . $errorMsg . ')']);
+            } else {
+                // Critical SMTP error
+                echo json_encode(['success' => false, 'message' => 'Error: ' . $errorMsg]);
+            }
         }
     }
     

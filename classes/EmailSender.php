@@ -120,11 +120,16 @@ class EmailSender {
             // Send email
             $mail->send();
             
-            // Update invoice to track email sent
-            $db->update('invoices', [
-                'email_sent_date' => date('Y-m-d H:i:s'),
-                'email_sent_to' => $emailAddress
-            ], 'id = ?', [$invoiceId]);
+            // Update invoice to track email sent (don't fail if this fails)
+            try {
+                $db->update('invoices', [
+                    'email_sent_date' => date('Y-m-d H:i:s'),
+                    'email_sent_to' => $emailAddress
+                ], 'id = ?', [$invoiceId]);
+            } catch (Exception $dbError) {
+                // Log but don't fail - email was sent successfully
+                error_log('Failed to update invoice email tracking: ' . $dbError->getMessage());
+            }
             
             return true;
         } catch (Exception $e) {
@@ -237,11 +242,16 @@ class EmailSender {
             // Send email
             $mail->send();
             
-            // Update statement to track email sent
-            $db->update('statements', [
-                'email_sent_date' => date('Y-m-d H:i:s'),
-                'email_sent' => 1
-            ], 'id = ?', [$statementId]);
+            // Update statement to track email sent (don't fail if this fails)
+            try {
+                $db->update('statements', [
+                    'email_sent_date' => date('Y-m-d H:i:s'),
+                    'email_sent' => 1
+                ], 'id = ?', [$statementId]);
+            } catch (Exception $dbError) {
+                // Log but don't fail - email was sent successfully
+                error_log('Failed to update statement email tracking: ' . $dbError->getMessage());
+            }
             
             return true;
         } catch (Exception $e) {
