@@ -1,8 +1,8 @@
-# PowerShell script to download PHPMailer manually
+# PowerShell script to download PHPMailer and DomPDF manually
 # Run this script: .\download-phpmailer.ps1
 
-Write-Host "PHPMailer Manual Download Script" -ForegroundColor Cyan
-Write-Host "================================" -ForegroundColor Cyan
+Write-Host "PHPMailer & DomPDF Manual Download Script" -ForegroundColor Cyan
+Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Check if phpmailer directory exists

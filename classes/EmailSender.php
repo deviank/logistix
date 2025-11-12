@@ -114,7 +114,16 @@ class EmailSender {
             
             // Attach PDF if file exists
             if (isset($pdfData['filepath']) && file_exists($pdfData['filepath'])) {
-                $mail->addAttachment($pdfData['filepath'], 'Invoice-' . $invoice['invoice_number'] . '.html');
+                // Determine file extension from filename
+                $extension = pathinfo($pdfData['filename'], PATHINFO_EXTENSION);
+                $attachmentName = 'Invoice-' . $invoice['invoice_number'] . '.' . $extension;
+                
+                // Explicitly set MIME type for PDF to ensure Outlook recognizes it correctly
+                if (strtolower($extension) === 'pdf') {
+                    $mail->addAttachment($pdfData['filepath'], $attachmentName, 'base64', 'application/pdf');
+                } else {
+                    $mail->addAttachment($pdfData['filepath'], $attachmentName);
+                }
             }
             
             // Send email
@@ -236,7 +245,16 @@ class EmailSender {
             
             // Attach PDF if file exists
             if (isset($pdfData['filepath']) && file_exists($pdfData['filepath'])) {
-                $mail->addAttachment($pdfData['filepath'], 'Statement-' . $statementNumber . '.html');
+                // Determine file extension from filename
+                $extension = pathinfo($pdfData['filename'], PATHINFO_EXTENSION);
+                $attachmentName = 'Statement-' . $statementNumber . '.' . $extension;
+                
+                // Explicitly set MIME type for PDF to ensure Outlook recognizes it correctly
+                if (strtolower($extension) === 'pdf') {
+                    $mail->addAttachment($pdfData['filepath'], $attachmentName, 'base64', 'application/pdf');
+                } else {
+                    $mail->addAttachment($pdfData['filepath'], $attachmentName);
+                }
             }
             
             // Send email

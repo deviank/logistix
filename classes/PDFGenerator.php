@@ -3,6 +3,14 @@
  * PDF Generator Class
  */
 
+// Load DomPDF for PDF generation
+if (file_exists(ROOT_PATH . 'vendor/autoload.php')) {
+    require_once ROOT_PATH . 'vendor/autoload.php';
+}
+
+use Dompdf\Dompdf;
+use Dompdf\Options;
+
 class PDFGenerator {
     
     public function generateInvoicePDF($invoiceId, $db) {
@@ -444,18 +452,75 @@ class PDFGenerator {
         // Generate HTML content
         $html = $this->getStatementHTML($statement, $items);
         
-        // Save HTML file
         $statementNumber = 'STMT' . date('Ym', strtotime($statement['statement_date'])) . str_pad($statementId, 3, '0', STR_PAD_LEFT);
-        $filename = 'statement-' . $statementNumber . '.html';
-        $filepath = UPLOADS_PATH . $filename;
         
-        file_put_contents($filepath, $html);
-        
-        return [
-            'filepath' => $filepath,
-            'url' => APP_URL . '/uploads/' . $filename,
-            'filename' => $filename
-        ];
+        // Check if DomPDF is available
+        if (class_exists('Dompdf\Dompdf')) {
+            // Generate actual PDF using DomPDF
+            return $this->generatePDFFromHTML($html, 'statement-' . $statementNumber, $statementNumber);
+        } else {
+            // Fallback to HTML if DomPDF not available
+            $filename = 'statement-' . $statementNumber . '.html';
+            $filepath = UPLOADS_PATH . $filename;
+            file_put_contents($filepath, $html);
+            
+            return [
+                'filepath' => $filepath,
+                'url' => APP_URL . '/uploads/' . $filename,
+                'filename' => $filename
+            ];
+        }
+    }
+    
+    /**
+     * Convert HTML to PDF using DomPDF
+     */
+    private function generatePDFFromHTML($html, $baseFilename, $documentNumber = '') {
+        try {
+            // Configure DomPDF options
+            $options = new Options();
+            $options->set('isHtml5ParserEnabled', true);
+            $options->set('isRemoteEnabled', true);
+            $options->set('isPhpEnabled', false);
+            $options->set('chroot', ROOT_PATH);
+            
+            // Create DomPDF instance
+            $dompdf = new Dompdf($options);
+            
+            // Load HTML content
+            $dompdf->loadHtml($html);
+            
+            // Set paper size (A4)
+            $dompdf->setPaper('A4', 'portrait');
+            
+            // Render PDF
+            $dompdf->render();
+            
+            // Generate filename
+            $filename = $baseFilename . '.pdf';
+            $filepath = UPLOADS_PATH . $filename;
+            
+            // Save PDF file
+            file_put_contents($filepath, $dompdf->output());
+            
+            return [
+                'filepath' => $filepath,
+                'url' => APP_URL . '/uploads/' . $filename,
+                'filename' => $filename
+            ];
+        } catch (Exception $e) {
+            error_log('PDF generation error: ' . $e->getMessage());
+            // Fallback to HTML if PDF generation fails
+            $filename = $baseFilename . '.html';
+            $filepath = UPLOADS_PATH . $filename;
+            file_put_contents($filepath, $html);
+            
+            return [
+                'filepath' => $filepath,
+                'url' => APP_URL . '/uploads/' . $filename,
+                'filename' => $filename
+            ];
+        }
     }
     
     private function getStatementHTML($statement, $items) {
