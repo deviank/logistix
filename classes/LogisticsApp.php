@@ -149,27 +149,31 @@ class LogisticsApp {
     private function getDashboardStats() {
         $stats = [];
         
-        // Invoices this month
-        $stats['invoices_this_month'] = $this->db->fetchOne("
+        // Invoices this month - count invoices created this month (using created_at)
+        $result = $this->db->fetchOne("
             SELECT COUNT(*) as count 
             FROM invoices 
-            WHERE MONTH(invoice_date) = MONTH(CURRENT_DATE()) 
-            AND YEAR(invoice_date) = YEAR(CURRENT_DATE())
-        ")['count'];
+            WHERE DATE_FORMAT(created_at, '%Y-%m') = DATE_FORMAT(CURRENT_DATE(), '%Y-%m')
+        ");
+        $stats['invoices_this_month'] = $result ? (int)$result['count'] : 0;
         
-        // Outstanding balance
-        $stats['outstanding_balance'] = $this->db->fetchOne("
+        // Outstanding balance - include both 'pending' and 'overdue' statuses, 
+        // or invoices that are past due date (even if still marked as pending)
+        $result = $this->db->fetchOne("
             SELECT COALESCE(SUM(total_amount), 0) as balance 
             FROM invoices 
-            WHERE payment_status = 'pending'
-        ")['balance'];
+            WHERE payment_status IN ('pending', 'overdue')
+               OR (payment_status = 'pending' AND due_date < CURDATE())
+        ");
+        $stats['outstanding_balance'] = $result ? (float)$result['balance'] : 0.00;
         
         // Active companies
-        $stats['active_companies'] = $this->db->fetchOne("
+        $result = $this->db->fetchOne("
             SELECT COUNT(*) as count 
             FROM companies 
             WHERE status = 'active'
-        ")['count'];
+        ");
+        $stats['active_companies'] = $result ? (int)$result['count'] : 0;
         
         return $stats;
     }
@@ -423,7 +427,7 @@ class LogisticsApp {
             'contractor_name' => $contractorName,
             'contractor_cost' => $contractorCost,
             'status' => $statusValue,
-            'date' => $date
+            'requested_date' => $date
         ];
         
         if ($loadSheetId) {
@@ -441,18 +445,25 @@ class LogisticsApp {
             return;
         }
         
-        // Create new load sheet
-        $loadSheetData['created_at'] = date('Y-m-d H:i:s');
-        $loadSheetId = $this->db->insert('load_sheets', $loadSheetData);
-        
-        if ($loadSheetId) {
+        // Create new load sheet (created_at is auto-set by MySQL)
+        try {
+            $loadSheetId = $this->db->insert('load_sheets', $loadSheetData);
+            
+            if ($loadSheetId) {
+                echo json_encode([
+                    'success' => true,
+                    'loadsheet_id' => $loadSheetId,
+                    'message' => 'Load sheet created successfully'
+                ]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to create load sheet']);
+            }
+        } catch (Exception $e) {
+            error_log('Error creating load sheet: ' . $e->getMessage());
             echo json_encode([
-                'success' => true,
-                'loadsheet_id' => $loadSheetId,
-                'message' => 'Load sheet created successfully'
+                'success' => false, 
+                'message' => 'Database error: ' . $e->getMessage()
             ]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to create load sheet']);
         }
     }
     
