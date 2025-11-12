@@ -1033,14 +1033,14 @@ function viewInvoice(invoiceId) {
                 const content = document.getElementById('invoice-details-content');
                 
                 content.innerHTML = `
-                    <div style="line-height: 1.8;">
+                    <div style="line-height: 1.8; word-wrap: break-word; overflow-wrap: break-word;">
                         <div style="margin-bottom: 1rem;">
                             <strong>Invoice Number:</strong><br>
-                            ${escapeHtml(invoice.invoice_number)}
+                            <span style="word-break: break-word;">${escapeHtml(invoice.invoice_number)}</span>
                         </div>
                         <div style="margin-bottom: 1rem;">
                             <strong>Company:</strong><br>
-                            ${escapeHtml(invoice.company_name)}
+                            <span style="word-break: break-word;">${escapeHtml(invoice.company_name)}</span>
                         </div>
                         <div style="margin-bottom: 1rem;">
                             <strong>Invoice Date:</strong><br>
@@ -1052,7 +1052,7 @@ function viewInvoice(invoiceId) {
                         </div>
                         <div style="margin-bottom: 1rem;">
                             <strong>Description:</strong><br>
-                            ${escapeHtml(invoice.cargo_description || '-')}
+                            <span style="word-break: break-word;">${escapeHtml(invoice.cargo_description || '-')}</span>
                         </div>
                         <div style="margin-bottom: 1rem;">
                             <strong>Pallets:</strong><br>
