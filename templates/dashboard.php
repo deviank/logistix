@@ -73,9 +73,9 @@
                                                     Create Invoice
                                                 </button>
                                             <?php else: ?>
-                                                <a href="?page=invoices" class="btn btn-success">
+                                                <button class="btn btn-success" onclick="viewInvoice(<?php echo $loadSheet['invoice_id']; ?>)">
                                                     View Invoice (<?php echo htmlspecialchars($loadSheet['invoice_number']); ?>)
-                                                </a>
+                                                </button>
                                             <?php endif; ?>
                                         <?php else: ?>
                                             <span class="status-badge status-<?php echo $loadSheet['status']; ?>">
@@ -127,6 +127,19 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Invoice Details Modal -->
+    <div id="invoice-details-modal" class="modal" style="display: none;">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>Invoice Details</h3>
+                <button class="close-btn" onclick="closeInvoiceDetailsModal()">&times;</button>
+            </div>
+            <div id="invoice-details-content">
+                <!-- Invoice details will be loaded here -->
+            </div>
+        </div>
     </div>
 
     <!-- Email Dialog (hidden by default) -->
