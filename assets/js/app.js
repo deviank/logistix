@@ -1171,7 +1171,7 @@ function editLoadSheet(loadSheetId) {
                 document.getElementById('loadsheet-id').value = ls.id;
                 document.getElementById('loadsheet-company-id').value = ls.company_id;
                 document.getElementById('loadsheet-company').value = ls.company_name;
-                document.getElementById('loadsheet-date').value = ls.date || ls.created_at.split(' ')[0];
+                document.getElementById('loadsheet-date').value = ls.requested_date || ls.created_at.split(' ')[0];
                 document.getElementById('pallet-quantity').value = ls.pallet_quantity;
                 document.getElementById('rate-per-pallet').value = ls.rate_per_pallet;
                 document.getElementById('cargo-description').value = ls.cargo_description || '';
