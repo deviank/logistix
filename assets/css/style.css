@@ -740,6 +740,28 @@ body {
     overflow-x: hidden;
 }
 
+#statement-details-content {
+    overflow-y: auto;
+    max-height: calc(90vh - 120px); /* Account for header and padding */
+    padding: 1rem;
+    word-wrap: break-word;
+    overflow-x: hidden;
+    flex: 1; /* Take remaining space in flex container */
+}
+
+#statement-details-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+#statement-details-content table thead {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1;
+}
+
 .modal-header h3 {
     margin: 0;
     color: #007cba;

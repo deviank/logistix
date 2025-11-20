@@ -25,7 +25,10 @@
             <div class="page-header">
                 <h2>Company Management</h2>
                 <p>Manage your customer companies and their billing information</p>
-                <button class="btn btn-primary" onclick="showAddCompanyForm()">Add New Company</button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-primary" onclick="showAddCompanyForm()">Add New Company</button>
+                    <button class="btn btn-info" onclick="generateDummyInvoiceData()" title="Generate random invoice history for the past 2 years">Generate Invoice History</button>
+                </div>
             </div>
 
             <!-- Companies List -->
@@ -65,6 +68,9 @@
                                     </div>
                                     <div class="detail-item">
                                         <strong>Rate per Pallet:</strong> R <?php echo number_format($company['rate_per_pallet'], 2); ?>
+                                    </div>
+                                    <div class="detail-item" style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #e0e0e0;">
+                                        <strong>Total Invoices:</strong> <span style="color: #007cba; font-weight: 600;"><?php echo isset($company['invoice_count']) ? (int)$company['invoice_count'] : 0; ?></span>
                                     </div>
                                 </div>
                                 <div class="company-actions">

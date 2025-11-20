@@ -22,9 +22,24 @@ class LogisticsApp {
     public function showCompanies() {
         $showInactive = isset($_GET['show_inactive']) && $_GET['show_inactive'] == '1';
         if ($showInactive) {
-            $companies = $this->db->fetchAll("SELECT * FROM companies ORDER BY status DESC, name");
+            $companies = $this->db->fetchAll("
+                SELECT c.*, 
+                       COUNT(i.id) as invoice_count
+                FROM companies c
+                LEFT JOIN invoices i ON i.company_id = c.id
+                GROUP BY c.id
+                ORDER BY c.status DESC, c.name
+            ");
         } else {
-            $companies = $this->db->fetchAll("SELECT * FROM companies WHERE status = 'active' ORDER BY name");
+            $companies = $this->db->fetchAll("
+                SELECT c.*, 
+                       COUNT(i.id) as invoice_count
+                FROM companies c
+                LEFT JOIN invoices i ON i.company_id = c.id
+                WHERE c.status = 'active'
+                GROUP BY c.id
+                ORDER BY c.name
+            ");
         }
         include TEMPLATES_PATH . 'companies.php';
     }
@@ -99,6 +114,9 @@ class LogisticsApp {
                 break;
             case 'create_sample_data':
                 $this->createSampleData();
+                break;
+            case 'generate_dummy_invoices':
+                $this->generateDummyInvoiceData();
                 break;
             case 'create_loadsheet':
                 $this->createLoadSheet();
@@ -342,6 +360,24 @@ class LogisticsApp {
         $company = $this->db->fetchOne("SELECT * FROM companies WHERE id = ?", [$companyId]);
         
         if ($company) {
+            // Get invoice count
+            $invoiceCount = $this->db->fetchOne("
+                SELECT COUNT(*) as count 
+                FROM invoices 
+                WHERE company_id = ?
+            ", [$companyId]);
+            $company['invoice_count'] = $invoiceCount['count'] ?? 0;
+            
+            // Get recent invoices (last 10)
+            $invoices = $this->db->fetchAll("
+                SELECT invoice_number, invoice_date, total_amount, payment_status
+                FROM invoices 
+                WHERE company_id = ?
+                ORDER BY invoice_date DESC
+                LIMIT 10
+            ", [$companyId]);
+            $company['recent_invoices'] = $invoices;
+            
             echo json_encode(['success' => true, 'company' => $company]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Company not found']);
@@ -351,6 +387,201 @@ class LogisticsApp {
     public function createSampleData() {
         // This would create additional sample data if needed
         echo json_encode(['success' => true, 'message' => 'Sample data already exists in database']);
+    }
+    
+    public function generateDummyInvoiceData() {
+        try {
+            // Get all active companies
+            $companies = $this->db->fetchAll("SELECT * FROM companies WHERE status = 'active'");
+            
+            if (empty($companies)) {
+                echo json_encode(['success' => false, 'message' => 'No active companies found']);
+                return;
+            }
+            
+            $totalLoadSheets = 0;
+            $totalInvoices = 0;
+            $startDate = date('Y-m-d', strtotime('-2 years'));
+            $endDate = date('Y-m-d');
+            
+            // Sample locations for variety
+            $pickupLocations = [
+                'Johannesburg Warehouse', 'Cape Town Distribution Center', 'Durban Port',
+                'Pretoria Storage Facility', 'Port Elizabeth Depot', 'Bloemfontein Hub',
+                'East London Terminal', 'Nelspruit Warehouse', 'Polokwane Distribution'
+            ];
+            
+            $deliveryLocations = [
+                'Spar Store, Sandton', 'Pick n Pay, Cape Town', 'Woolworths, Durban',
+                'Checkers, Pretoria', 'Shoprite, Port Elizabeth', 'Makro, Bloemfontein',
+                'Game, East London', 'Builders Warehouse, Nelspruit', 'Clicks, Polokwane'
+            ];
+            
+            $cargoDescriptions = [
+                'Grocery items and household goods', 'Fresh produce and dairy products',
+                'Beverages and snacks', 'Electronics and appliances', 'Furniture and home goods',
+                'Clothing and textiles', 'Building materials', 'Automotive parts',
+                'Pharmaceutical products', 'Office supplies'
+            ];
+            
+            foreach ($companies as $company) {
+                // Random number of invoices per company (8-40 over 2 years)
+                $numInvoices = rand(8, 40);
+                
+                // Generate invoices spread over 2 years
+                for ($i = 0; $i < $numInvoices; $i++) {
+                    // Random date within the past 2 years (more recent dates slightly more likely)
+                    $daysAgo = rand(0, 730); // 0 to 730 days ago
+                    $invoiceDate = date('Y-m-d', strtotime("-{$daysAgo} days"));
+                    
+                    // Random pallet quantity (1-15 pallets)
+                    $palletQuantity = rand(1, 15);
+                    
+                    // Use company's rate or add some variation (±20%)
+                    $rateVariation = 1 + (rand(-20, 20) / 100);
+                    $ratePerPallet = $company['rate_per_pallet'] * $rateVariation;
+                    $finalRate = $palletQuantity * $ratePerPallet;
+                    
+                    // Random delivery method (70% own, 30% contractor)
+                    $useContractor = rand(1, 100) <= 30;
+                    $deliveryMethod = $useContractor ? 'contractor' : 'own';
+                    $contractorCost = $useContractor ? $finalRate * (rand(50, 80) / 100) : 0;
+                    
+                    // Random status (more completed than draft)
+                    $statusRand = rand(1, 100);
+                    if ($statusRand <= 70) {
+                        $status = 'completed';
+                    } elseif ($statusRand <= 85) {
+                        $status = 'confirmed';
+                    } else {
+                        $status = 'draft';
+                    }
+                    
+                    // Create load sheet
+                    $loadSheetData = [
+                        'company_id' => $company['id'],
+                        'pickup_location' => $pickupLocations[array_rand($pickupLocations)],
+                        'delivery_location' => $deliveryLocations[array_rand($deliveryLocations)],
+                        'cargo_description' => $cargoDescriptions[array_rand($cargoDescriptions)],
+                        'special_instructions' => rand(1, 3) === 1 ? 'Handle with care - fragile items' : null,
+                        'pallet_quantity' => $palletQuantity,
+                        'cargo_weight' => round($palletQuantity * rand(200, 500), 2),
+                        'delivery_method' => $deliveryMethod,
+                        'contractor_name' => $useContractor ? 'Contractor ' . rand(1, 5) : null,
+                        'contractor_cost' => $contractorCost,
+                        'rate_per_pallet' => $ratePerPallet,
+                        'final_rate' => $finalRate,
+                        'requested_date' => $invoiceDate,
+                        'status' => $status,
+                        'created_at' => $invoiceDate . ' ' . date('H:i:s', rand(8 * 3600, 17 * 3600))
+                    ];
+                    
+                    $loadSheetId = $this->db->insert('load_sheets', $loadSheetData);
+                    $totalLoadSheets++;
+                    
+                    // Only create invoice if load sheet is completed or confirmed
+                    if ($status !== 'draft') {
+                        // Generate invoice number for the specific date
+                        $invoiceNumber = $this->generateInvoiceNumberForDate($invoiceDate);
+                        
+                        // Calculate amounts
+                        $subtotal = $finalRate;
+                        $vatAmount = round($subtotal * (VAT_RATE / 100), 2);
+                        $totalAmount = $subtotal + $vatAmount;
+                        
+                        // Random payment status (60% paid, 30% pending, 10% overdue)
+                        $paymentRand = rand(1, 100);
+                        if ($paymentRand <= 60) {
+                            $paymentStatus = 'paid';
+                            // Payment date is between invoice date and now (or due date)
+                            $dueDate = date('Y-m-d', strtotime($invoiceDate . ' +' . $company['payment_terms'] . ' days'));
+                            $maxPaymentDate = min($dueDate, $endDate);
+                            $daysAfterInvoice = rand(0, min(60, (strtotime($maxPaymentDate) - strtotime($invoiceDate)) / 86400));
+                            $paymentDate = date('Y-m-d', strtotime($invoiceDate . ' +' . $daysAfterInvoice . ' days'));
+                        } elseif ($paymentRand <= 90) {
+                            $paymentStatus = 'pending';
+                            $paymentDate = null;
+                        } else {
+                            $paymentStatus = 'overdue';
+                            $paymentDate = null;
+                        }
+                        
+                        $dueDate = date('Y-m-d', strtotime($invoiceDate . ' +' . $company['payment_terms'] . ' days'));
+                        
+                        // Create invoice
+                        $invoiceData = [
+                            'load_sheet_id' => $loadSheetId,
+                            'company_id' => $company['id'],
+                            'invoice_number' => $invoiceNumber,
+                            'invoice_date' => $invoiceDate,
+                            'due_date' => $dueDate,
+                            'subtotal' => $subtotal,
+                            'vat_rate' => VAT_RATE,
+                            'vat_amount' => $vatAmount,
+                            'total_amount' => $totalAmount,
+                            'payment_status' => $paymentStatus,
+                            'payment_date' => $paymentDate,
+                            'created_at' => $invoiceDate . ' ' . date('H:i:s', rand(8 * 3600, 17 * 3600))
+                        ];
+                        
+                        $this->db->insert('invoices', $invoiceData);
+                        $totalInvoices++;
+                    }
+                }
+            }
+            
+            echo json_encode([
+                'success' => true, 
+                'message' => "Generated {$totalLoadSheets} load sheets and {$totalInvoices} invoices for " . count($companies) . " companies",
+                'load_sheets' => $totalLoadSheets,
+                'invoices' => $totalInvoices,
+                'companies' => count($companies)
+            ]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Error generating dummy data: ' . $e->getMessage()]);
+        }
+    }
+    
+    private function generateInvoiceNumberForDate($date) {
+        $year = date('Y', strtotime($date));
+        $month = date('m', strtotime($date));
+        
+        // Get all invoice numbers for this specific month/year
+        $existingInvoices = $this->db->fetchAll("
+            SELECT invoice_number 
+            FROM invoices 
+            WHERE invoice_number LIKE ? 
+            ORDER BY invoice_number DESC
+        ", ["INV{$year}{$month}%"]);
+        
+        // Find the highest number used
+        $maxNumber = 0;
+        foreach ($existingInvoices as $inv) {
+            $number = intval(substr($inv['invoice_number'], -3));
+            if ($number > $maxNumber) {
+                $maxNumber = $number;
+            }
+        }
+        
+        // Use next sequential number
+        $newNumber = $maxNumber + 1;
+        
+        // If no existing invoices, start from a random number (1-50) to make it look realistic
+        if ($maxNumber === 0) {
+            $newNumber = rand(1, 50);
+        }
+        
+        $invoiceNumber = 'INV' . $year . $month . str_pad($newNumber, 3, '0', STR_PAD_LEFT);
+        
+        // Double-check uniqueness (in case of race condition)
+        $check = $this->db->fetchOne("SELECT id FROM invoices WHERE invoice_number = ?", [$invoiceNumber]);
+        if ($check) {
+            // If exists, increment and try again
+            $newNumber++;
+            $invoiceNumber = 'INV' . $year . $month . str_pad($newNumber, 3, '0', STR_PAD_LEFT);
+        }
+        
+        return $invoiceNumber;
     }
     
     private function generateInvoiceNumber() {

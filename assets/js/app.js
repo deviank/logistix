@@ -297,6 +297,38 @@ function createSampleData() {
     showNotification('Sample data already exists in the database!', 'info');
 }
 
+function generateDummyInvoiceData() {
+    if (!confirm('This will generate random invoice history for the past 2 years for all active companies. This may take a moment. Continue?')) {
+        return;
+    }
+    
+    // Show loading notification
+    showNotification('Generating invoice history... This may take a moment.', 'info');
+    
+    fetch('?page=ajax&action=generate_dummy_invoices', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(
+                `Successfully generated ${data.invoices} invoices and ${data.load_sheets} load sheets for ${data.companies} companies!`, 
+                'success'
+            );
+            // Reload the page after a short delay to show updated invoice counts
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            showNotification('Error: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error generating invoice history', 'error');
+    });
+}
+
 // Company Management Functions
 function showAddCompanyForm() {
     const modal = document.getElementById('company-modal');
@@ -428,9 +460,45 @@ function viewCompanyDetails(companyId) {
                         </div>
                         ` : ''}
                         <div style="margin-bottom: 1rem;">
+                            <strong>Total Invoices:</strong><br>
+                            <span style="color: #007cba; font-weight: 600; font-size: 1.1rem;">${company.invoice_count || 0}</span>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
                             <strong>Created:</strong><br>
                             ${company.created_at ? new Date(company.created_at).toLocaleDateString() : '-'}
                         </div>
+                        ${company.recent_invoices && company.recent_invoices.length > 0 ? `
+                        <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid #e0e0e0;">
+                            <h4 style="color: #007cba; margin-bottom: 1rem;">Recent Invoice History</h4>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                                <thead>
+                                    <tr style="background: #f8f9fa;">
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Invoice #</th>
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Date</th>
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Amount</th>
+                                        <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${company.recent_invoices.map(invoice => `
+                                        <tr>
+                                            <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(invoice.invoice_number)}</td>
+                                            <td style="border: 1px solid #ddd; padding: 8px;">${new Date(invoice.invoice_date).toLocaleDateString()}</td>
+                                            <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">R ${parseFloat(invoice.total_amount).toFixed(2)}</td>
+                                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                                                <span class="status-badge status-${invoice.payment_status}">${invoice.payment_status.charAt(0).toUpperCase() + invoice.payment_status.slice(1)}</span>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                            ${company.invoice_count > 10 ? `<p style="margin-top: 0.5rem; color: #666; font-size: 0.85rem;">Showing last 10 of ${company.invoice_count} invoices</p>` : ''}
+                        </div>
+                        ` : company.invoice_count > 0 ? `
+                        <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid #e0e0e0;">
+                            <p style="color: #666;">No recent invoices to display.</p>
+                        </div>
+                        ` : ''}
                     </div>
                 `;
                 
