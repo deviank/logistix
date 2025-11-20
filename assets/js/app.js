@@ -75,6 +75,21 @@ function initializeEventListeners() {
     if (statementForm) {
         statementForm.addEventListener('submit', handleGenerateStatementSubmit);
     }
+    
+    // Invoice filtering
+    const statusFilter = document.getElementById('status-filter');
+    const dateFilter = document.getElementById('date-filter');
+    const invoiceSearch = document.getElementById('invoice-search');
+    
+    if (statusFilter) {
+        statusFilter.addEventListener('change', filterInvoices);
+    }
+    if (dateFilter) {
+        dateFilter.addEventListener('change', filterInvoices);
+    }
+    if (invoiceSearch) {
+        invoiceSearch.addEventListener('input', filterInvoices);
+    }
 }
 
 function createInvoice(loadSheetId) {
@@ -1642,6 +1657,132 @@ function closeStatementModal() {
 // Export Functions
 function exportInvoices() {
     showNotification('Export functionality coming soon!', 'info');
+}
+
+function filterInvoices() {
+    const statusFilter = document.getElementById('status-filter');
+    const dateFilter = document.getElementById('date-filter');
+    const invoiceSearch = document.getElementById('invoice-search');
+    const invoiceRows = document.querySelectorAll('.invoice-row');
+    
+    if (!invoiceRows.length) return;
+    
+    const statusValue = statusFilter ? statusFilter.value : '';
+    const dateValue = dateFilter ? dateFilter.value : '';
+    const searchValue = invoiceSearch ? invoiceSearch.value.toLowerCase().trim() : '';
+    
+    // Calculate date range if needed
+    let dateStart = null;
+    let dateEnd = null;
+    
+    if (dateValue) {
+        const now = new Date();
+        switch (dateValue) {
+            case 'this_month':
+                dateStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                dateEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                break;
+            case 'last_month':
+                dateStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                dateEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+                break;
+            case 'this_quarter':
+                const quarter = Math.floor(now.getMonth() / 3);
+                dateStart = new Date(now.getFullYear(), quarter * 3, 1);
+                dateEnd = new Date(now.getFullYear(), (quarter + 1) * 3, 0);
+                break;
+            case 'this_year':
+                dateStart = new Date(now.getFullYear(), 0, 1);
+                dateEnd = new Date(now.getFullYear(), 11, 31);
+                break;
+        }
+    }
+    
+    let visibleCount = 0;
+    let pendingTotal = 0;
+    let paidTotal = 0;
+    
+    invoiceRows.forEach(row => {
+        const rowStatus = row.getAttribute('data-status') || '';
+        const rowDate = row.getAttribute('data-invoice-date');
+        const invoiceNumber = row.getAttribute('data-invoice-number') || '';
+        const company = row.getAttribute('data-company') || '';
+        const description = row.getAttribute('data-description') || '';
+        
+        // Status filter
+        let statusMatch = !statusValue || rowStatus === statusValue;
+        
+        // Date filter
+        let dateMatch = true;
+        if (dateValue && dateStart && dateEnd && rowDate) {
+            const invoiceDate = new Date(rowDate);
+            dateMatch = invoiceDate >= dateStart && invoiceDate <= dateEnd;
+        }
+        
+        // Search filter
+        let searchMatch = true;
+        if (searchValue) {
+            searchMatch = invoiceNumber.includes(searchValue) || 
+                         company.includes(searchValue) || 
+                         description.includes(searchValue);
+        }
+        
+        // Show/hide row based on all filters
+        if (statusMatch && dateMatch && searchMatch) {
+            row.style.display = '';
+            visibleCount++;
+            
+            // Calculate totals for visible rows
+            const totalCell = row.querySelector('td:nth-child(8) strong');
+            if (totalCell) {
+                const totalText = totalCell.textContent.replace(/[R\s,]/g, '');
+                const total = parseFloat(totalText) || 0;
+                
+                if (rowStatus === 'pending' || rowStatus === 'overdue') {
+                    pendingTotal += total;
+                } else if (rowStatus === 'paid') {
+                    paidTotal += total;
+                }
+            }
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    // Update summary cards
+    updateInvoiceSummary(visibleCount, pendingTotal, paidTotal);
+    
+    // Show "no results" message if needed
+    const tbody = document.querySelector('.invoices-table tbody');
+    let noDataRow = tbody.querySelector('.no-results-row');
+    
+    if (visibleCount === 0 && invoiceRows.length > 0) {
+        if (!noDataRow) {
+            noDataRow = document.createElement('tr');
+            noDataRow.className = 'no-results-row';
+            noDataRow.innerHTML = '<td colspan="11" class="no-data">No invoices match the current filters.</td>';
+            tbody.appendChild(noDataRow);
+        }
+        noDataRow.style.display = '';
+    } else if (noDataRow) {
+        noDataRow.style.display = 'none';
+    }
+}
+
+function updateInvoiceSummary(totalCount, pendingTotal, paidTotal) {
+    const totalInvoicesCard = document.querySelector('.summary-card:first-child .summary-number');
+    const pendingAmountCard = document.querySelector('.summary-card:nth-child(2) .summary-number');
+    const paidAmountCard = document.querySelector('.summary-card:nth-child(3) .summary-number');
+    
+    if (totalInvoicesCard) {
+        totalInvoicesCard.textContent = totalCount;
+    }
+    if (pendingAmountCard) {
+        pendingAmountCard.textContent = 'R ' + pendingTotal.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    if (paidAmountCard) {
+        paidAmountCard.textContent = 'R ' + paidTotal.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
 }
 
 function exportStatements() {

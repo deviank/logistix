@@ -30,7 +30,7 @@
             <!-- Invoice Filters -->
             <div class="filters-section">
                 <div class="filter-group">
-                    <label for="status-filter">Status:</label>
+                    <label for="status-filter">Payment Status:</label>
                     <select id="status-filter" class="filter-select">
                         <option value="">All Status</option>
                         <option value="pending">Pending</option>
@@ -83,13 +83,25 @@
                         <tbody>
                             <?php if (!empty($invoices)): ?>
                                 <?php foreach ($invoices as $invoice): ?>
-                                    <tr data-invoice-id="<?php echo $invoice['id']; ?>" class="invoice-row">
+                                    <?php 
+                                    $dueDate = strtotime($invoice['due_date']);
+                                    $isOverdue = $dueDate < time() && $invoice['payment_status'] === 'pending';
+                                    $displayStatus = $isOverdue ? 'overdue' : $invoice['payment_status'];
+                                    $invoiceDate = strtotime($invoice['invoice_date']);
+                                    ?>
+                                    <tr data-invoice-id="<?php echo $invoice['id']; ?>" 
+                                        class="invoice-row" 
+                                        data-status="<?php echo htmlspecialchars($displayStatus); ?>"
+                                        data-invoice-date="<?php echo date('Y-m-d', $invoiceDate); ?>"
+                                        data-company="<?php echo htmlspecialchars(strtolower($invoice['company_name'])); ?>"
+                                        data-invoice-number="<?php echo htmlspecialchars(strtolower($invoice['invoice_number'])); ?>"
+                                        data-description="<?php echo htmlspecialchars(strtolower($invoice['cargo_description'])); ?>">
                                         <td>
                                             <a href="#" onclick="viewInvoice(<?php echo $invoice['id']; ?>); return false;">
                                                 <?php echo htmlspecialchars($invoice['invoice_number']); ?>
                                             </a>
                                         </td>
-                                        <td><?php echo date('M j, Y', strtotime($invoice['invoice_date'])); ?></td>
+                                        <td><?php echo date('M j, Y', $invoiceDate); ?></td>
                                         <td><?php echo htmlspecialchars($invoice['company_name']); ?></td>
                                         <td><?php echo htmlspecialchars($invoice['cargo_description']); ?></td>
                                         <td><?php echo $invoice['pallet_quantity']; ?></td>
@@ -97,17 +109,13 @@
                                         <td>R <?php echo number_format($invoice['vat_amount'], 2); ?></td>
                                         <td><strong>R <?php echo number_format($invoice['total_amount'], 2); ?></strong></td>
                                         <td>
-                                            <?php 
-                                            $dueDate = strtotime($invoice['due_date']);
-                                            $isOverdue = $dueDate < time() && $invoice['payment_status'] === 'pending';
-                                            ?>
                                             <span class="<?php echo $isOverdue ? 'overdue' : ''; ?>">
                                                 <?php echo date('M j, Y', $dueDate); ?>
                                             </span>
                                         </td>
                                         <td>
-                                            <span class="status-badge status-<?php echo $invoice['payment_status']; ?>">
-                                                <?php echo ucfirst($invoice['payment_status']); ?>
+                                            <span class="status-badge status-<?php echo $displayStatus; ?>">
+                                                <?php echo ucfirst($displayStatus); ?>
                                             </span>
                                         </td>
                                         <td>
@@ -115,7 +123,7 @@
                                                 <button class="btn btn-sm btn-info" onclick="viewInvoice(<?php echo $invoice['id']; ?>)">View</button>
                                                 <button class="btn btn-sm btn-secondary" onclick="downloadInvoice(<?php echo $invoice['id']; ?>)">PDF</button>
                                                 <button class="btn btn-sm btn-warning" onclick="generateStatementFromInvoice(<?php echo $invoice['id']; ?>, <?php echo $invoice['company_id']; ?>, '<?php echo date('Y-m', strtotime($invoice['invoice_date'])); ?>')" title="Generate Statement for this Company">Statement</button>
-                                                <?php if ($invoice['payment_status'] === 'pending'): ?>
+                                                <?php if ($invoice['payment_status'] === 'pending' || $isOverdue): ?>
                                                     <button class="btn btn-sm btn-success mark-paid-btn" data-invoice-id="<?php echo $invoice['id']; ?>">Mark Paid</button>
                                                     <button class="btn btn-sm btn-primary send-email-btn" data-invoice-id="<?php echo $invoice['id']; ?>">Send Email</button>
                                                 <?php endif; ?>
