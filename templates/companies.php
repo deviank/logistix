@@ -27,7 +27,9 @@
                 <p>Manage your customer companies and their billing information</p>
                 <div style="display: flex; gap: 10px;">
                     <button class="btn btn-primary" onclick="showAddCompanyForm()">Add New Company</button>
+                    <button class="btn btn-info" onclick="generateDummyCompanies()" title="Generate random South African companies for testing">Generate Dummy Companies</button>
                     <button class="btn btn-info" onclick="generateDummyInvoiceData()" title="Generate random invoice history for the past 2 years">Generate Invoice History</button>
+                    <button class="btn btn-warning" onclick="removeDuplicateCompanies()" title="Remove duplicate companies (keeps the one with most data)">Remove Duplicates</button>
                 </div>
             </div>
 

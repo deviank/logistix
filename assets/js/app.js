@@ -312,6 +312,70 @@ function createSampleData() {
     showNotification('Sample data already exists in the database!', 'info');
 }
 
+function generateDummyCompanies() {
+    if (!confirm('This will generate random South African companies for testing purposes. Continue?')) {
+        return;
+    }
+    
+    // Show loading notification
+    showNotification('Generating dummy companies...', 'info');
+    
+    fetch('?page=ajax&action=generate_dummy_companies', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(
+                data.message || `Successfully generated ${data.created} companies!`, 
+                'success'
+            );
+            // Reload the page after a short delay to show new companies
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            showNotification('Error: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error generating dummy companies', 'error');
+    });
+}
+
+function removeDuplicateCompanies() {
+    if (!confirm('This will remove duplicate companies (companies with the same name). The company with the most invoices/load sheets will be kept. This action cannot be undone. Continue?')) {
+        return;
+    }
+    
+    // Show loading notification
+    showNotification('Removing duplicate companies...', 'info');
+    
+    fetch('?page=ajax&action=remove_duplicate_companies', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(
+                data.message || `Removed ${data.deleted} duplicate companies.`, 
+                'success'
+            );
+            // Reload the page after a short delay
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            showNotification('Error: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error removing duplicate companies', 'error');
+    });
+}
+
 function generateDummyInvoiceData() {
     if (!confirm('This will generate random invoice history for the past 2 years for all active companies. This may take a moment. Continue?')) {
         return;

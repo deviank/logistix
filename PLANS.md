@@ -10,4 +10,6 @@ Use this file to track what you want to work on in your next session.
 
 - Hover or click on Dashboard Overview tiles for invoices should show a history graph
 
+## Issues picked up
 
+- 
