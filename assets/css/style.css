@@ -41,6 +41,7 @@ body {
 .nav {
     display: flex;
     gap: 2rem;
+    padding-left: 2rem;
 }
 
 .nav-link {
