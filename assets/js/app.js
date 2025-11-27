@@ -1745,6 +1745,7 @@ function filterLoadSheets() {
     const searchValue = loadsheetSearch ? loadsheetSearch.value.toLowerCase().trim() : '';
     
     let visibleCount = 0;
+    let totalRevenue = 0;
     
     loadsheetRows.forEach(row => {
         const rowStatus = row.getAttribute('data-status') || '';
@@ -1769,10 +1770,21 @@ function filterLoadSheets() {
         if (statusMatch && searchMatch) {
             row.style.display = '';
             visibleCount++;
+            
+            // Calculate revenue from Rate column (5th column, index 4)
+            const rateCell = row.querySelector('td:nth-child(5)');
+            if (rateCell) {
+                const rateText = rateCell.textContent.replace(/[R\s,]/g, '');
+                const rate = parseFloat(rateText) || 0;
+                totalRevenue += rate;
+            }
         } else {
             row.style.display = 'none';
         }
     });
+    
+    // Update status column total
+    updateLoadSheetStatusTotal(statusValue, visibleCount, totalRevenue);
     
     // Show "no results" message if needed
     const tbody = document.querySelector('.loadsheets-table tbody');
@@ -1790,6 +1802,47 @@ function filterLoadSheets() {
         }
     } else if (noDataRow) {
         noDataRow.style.display = 'none';
+    }
+}
+
+function updateLoadSheetStatusTotal(statusValue, count, totalRevenue) {
+    const tbody = document.querySelector('.loadsheets-table tbody');
+    if (!tbody) return;
+    
+    // Remove existing total row
+    const existingTotalRow = tbody.querySelector('.status-total-row');
+    if (existingTotalRow) {
+        existingTotalRow.remove();
+    }
+    
+    // Only show total if a status is selected
+    if (statusValue && count > 0) {
+        const totalRow = document.createElement('tr');
+        totalRow.className = 'status-total-row';
+        totalRow.style.fontWeight = 'bold';
+        totalRow.style.backgroundColor = '#f8f9fa';
+        totalRow.style.borderTop = '2px solid #007cba';
+        
+        const statusLabel = statusValue === 'pending' ? 'Pending' : 
+                           statusValue === 'in_progress' ? 'In Progress' : 
+                           statusValue === 'completed' ? 'Completed' : statusValue;
+        
+        const formattedRevenue = 'R ' + totalRevenue.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        
+        totalRow.innerHTML = `
+            <td colspan="4" style="text-align: right; padding: 0.75rem;">
+                <strong>Total ${statusLabel} Load Sheets:</strong> ${count} | <strong>Total Revenue:</strong> ${formattedRevenue}
+            </td>
+            <td style="padding: 0.75rem; text-align: right;">
+                <strong>${formattedRevenue}</strong>
+            </td>
+            <td style="padding: 0.75rem;">
+                <span class="status-badge status-${statusValue}">${count}</span>
+            </td>
+            <td style="padding: 0.75rem;"></td>
+        `;
+        
+        tbody.appendChild(totalRow);
     }
 }
 
