@@ -79,7 +79,7 @@ function initializeEventListeners() {
     // Invoice filtering
     const invoiceStatusFilter = document.getElementById('status-filter');
     const dateFilter = document.getElementById('date-filter');
-    const invoiceSearch = document.getElementById('invoice-search');
+    const companyFilter = document.getElementById('company-filter');
     
     if (invoiceStatusFilter && document.querySelector('.invoice-row')) {
         invoiceStatusFilter.addEventListener('change', filterInvoices);
@@ -87,8 +87,8 @@ function initializeEventListeners() {
     if (dateFilter) {
         dateFilter.addEventListener('change', filterInvoices);
     }
-    if (invoiceSearch) {
-        invoiceSearch.addEventListener('input', filterInvoices);
+    if (companyFilter) {
+        companyFilter.addEventListener('change', filterInvoices);
     }
     
     // Loadsheet filtering
@@ -1849,14 +1849,14 @@ function updateLoadSheetStatusTotal(statusValue, count, totalRevenue) {
 function filterInvoices() {
     const statusFilter = document.getElementById('status-filter');
     const dateFilter = document.getElementById('date-filter');
-    const invoiceSearch = document.getElementById('invoice-search');
+    const companyFilter = document.getElementById('company-filter');
     const invoiceRows = document.querySelectorAll('.invoice-row');
     
     if (!invoiceRows.length) return;
     
     const statusValue = statusFilter ? statusFilter.value : '';
     const dateValue = dateFilter ? dateFilter.value : '';
-    const searchValue = invoiceSearch ? invoiceSearch.value.toLowerCase().trim() : '';
+    const companyValue = companyFilter ? companyFilter.value : '';
     
     // Calculate date range if needed
     let dateStart = null;
@@ -1892,9 +1892,7 @@ function filterInvoices() {
     invoiceRows.forEach(row => {
         const rowStatus = row.getAttribute('data-status') || '';
         const rowDate = row.getAttribute('data-invoice-date');
-        const invoiceNumber = row.getAttribute('data-invoice-number') || '';
-        const company = row.getAttribute('data-company') || '';
-        const description = row.getAttribute('data-description') || '';
+        const companyId = row.getAttribute('data-company-id') || '';
         
         // Status filter
         let statusMatch = !statusValue || rowStatus === statusValue;
@@ -1906,16 +1904,14 @@ function filterInvoices() {
             dateMatch = invoiceDate >= dateStart && invoiceDate <= dateEnd;
         }
         
-        // Search filter
-        let searchMatch = true;
-        if (searchValue) {
-            searchMatch = invoiceNumber.includes(searchValue) || 
-                         company.includes(searchValue) || 
-                         description.includes(searchValue);
+        // Company filter
+        let companyMatch = true;
+        if (companyValue) {
+            companyMatch = companyId === companyValue;
         }
         
         // Show/hide row based on all filters
-        if (statusMatch && dateMatch && searchMatch) {
+        if (statusMatch && dateMatch && companyMatch) {
             row.style.display = '';
             visibleCount++;
             
@@ -1941,16 +1937,18 @@ function filterInvoices() {
     
     // Show "no results" message if needed
     const tbody = document.querySelector('.invoices-table tbody');
-    let noDataRow = tbody.querySelector('.no-results-row');
+    let noDataRow = tbody ? tbody.querySelector('.no-results-row') : null;
     
     if (visibleCount === 0 && invoiceRows.length > 0) {
-        if (!noDataRow) {
+        if (!noDataRow && tbody) {
             noDataRow = document.createElement('tr');
             noDataRow.className = 'no-results-row';
             noDataRow.innerHTML = '<td colspan="11" class="no-data">No invoices match the current filters.</td>';
             tbody.appendChild(noDataRow);
         }
-        noDataRow.style.display = '';
+        if (noDataRow) {
+            noDataRow.style.display = '';
+        }
     } else if (noDataRow) {
         noDataRow.style.display = 'none';
     }

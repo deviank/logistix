@@ -49,7 +49,18 @@
                     </select>
                 </div>
                 <div class="filter-group">
-                    <input type="text" id="invoice-search" placeholder="Search invoices..." class="search-input">
+                    <label for="company-filter">Company:</label>
+                    <select id="company-filter" class="filter-select">
+                        <option value="">All Companies</option>
+                        <?php
+                        $companies = $this->db->fetchAll("SELECT * FROM companies WHERE status = 'active' ORDER BY name");
+                        foreach ($companies as $company):
+                        ?>
+                            <option value="<?php echo $company['id']; ?>">
+                                <?php echo htmlspecialchars($company['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
             </div>
 
@@ -93,6 +104,7 @@
                                         class="invoice-row" 
                                         data-status="<?php echo htmlspecialchars($displayStatus); ?>"
                                         data-invoice-date="<?php echo date('Y-m-d', $invoiceDate); ?>"
+                                        data-company-id="<?php echo $invoice['company_id']; ?>"
                                         data-company="<?php echo htmlspecialchars(strtolower($invoice['company_name'])); ?>"
                                         data-invoice-number="<?php echo htmlspecialchars(strtolower($invoice['invoice_number'])); ?>"
                                         data-description="<?php echo htmlspecialchars(strtolower($invoice['cargo_description'])); ?>">
