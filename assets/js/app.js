@@ -77,18 +77,29 @@ function initializeEventListeners() {
     }
     
     // Invoice filtering
-    const statusFilter = document.getElementById('status-filter');
+    const invoiceStatusFilter = document.getElementById('status-filter');
     const dateFilter = document.getElementById('date-filter');
     const invoiceSearch = document.getElementById('invoice-search');
     
-    if (statusFilter) {
-        statusFilter.addEventListener('change', filterInvoices);
+    if (invoiceStatusFilter && document.querySelector('.invoice-row')) {
+        invoiceStatusFilter.addEventListener('change', filterInvoices);
     }
     if (dateFilter) {
         dateFilter.addEventListener('change', filterInvoices);
     }
     if (invoiceSearch) {
         invoiceSearch.addEventListener('input', filterInvoices);
+    }
+    
+    // Loadsheet filtering
+    const loadsheetStatusFilter = document.getElementById('status-filter');
+    const loadsheetSearch = document.getElementById('loadsheet-search');
+    
+    if (loadsheetStatusFilter && document.querySelector('.loadsheet-row')) {
+        loadsheetStatusFilter.addEventListener('change', filterLoadSheets);
+    }
+    if (loadsheetSearch) {
+        loadsheetSearch.addEventListener('input', filterLoadSheets);
     }
 }
 
@@ -1721,6 +1732,65 @@ function closeStatementModal() {
 // Export Functions
 function exportInvoices() {
     showNotification('Export functionality coming soon!', 'info');
+}
+
+function filterLoadSheets() {
+    const statusFilter = document.getElementById('status-filter');
+    const loadsheetSearch = document.getElementById('loadsheet-search');
+    const loadsheetRows = document.querySelectorAll('.loadsheet-row');
+    
+    if (!loadsheetRows.length) return;
+    
+    const statusValue = statusFilter ? statusFilter.value : '';
+    const searchValue = loadsheetSearch ? loadsheetSearch.value.toLowerCase().trim() : '';
+    
+    let visibleCount = 0;
+    
+    loadsheetRows.forEach(row => {
+        const rowStatus = row.getAttribute('data-status') || '';
+        const company = row.getAttribute('data-company') || '';
+        const description = row.getAttribute('data-description') || '';
+        
+        // Status filter - the data-status already has the mapped display value
+        // (pending, in_progress, completed) which matches the filter dropdown
+        let statusMatch = true;
+        if (statusValue) {
+            statusMatch = rowStatus === statusValue;
+        }
+        
+        // Search filter
+        let searchMatch = true;
+        if (searchValue) {
+            searchMatch = company.includes(searchValue) || 
+                         description.includes(searchValue);
+        }
+        
+        // Show/hide row based on filters
+        if (statusMatch && searchMatch) {
+            row.style.display = '';
+            visibleCount++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    // Show "no results" message if needed
+    const tbody = document.querySelector('.loadsheets-table tbody');
+    let noDataRow = tbody ? tbody.querySelector('.no-results-row') : null;
+    
+    if (visibleCount === 0 && loadsheetRows.length > 0) {
+        if (!noDataRow && tbody) {
+            noDataRow = document.createElement('tr');
+            noDataRow.className = 'no-results-row';
+            noDataRow.innerHTML = '<td colspan="7" class="no-data">No load sheets match the current filters.</td>';
+            tbody.appendChild(noDataRow);
+        }
+        if (noDataRow) {
+            noDataRow.style.display = '';
+        }
+    } else if (noDataRow) {
+        noDataRow.style.display = 'none';
+    }
 }
 
 function filterInvoices() {
