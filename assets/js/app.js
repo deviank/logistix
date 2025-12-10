@@ -17,6 +17,9 @@ function initializeApp() {
     // Load contractors when app initializes
     loadContractors();
     
+    // Initialize back to top button
+    initBackToTopButton();
+    
     // Auto-refresh stats every 5 minutes
     setInterval(refreshStats, 300000);
 }
@@ -1996,3 +1999,37 @@ document.addEventListener('keydown', function(event) {
         closeStatementModal();
     }
 });
+
+function initBackToTopButton() {
+    // Create back to top button if it doesn't exist
+    let backToTopBtn = document.getElementById('back-to-top');
+    if (!backToTopBtn) {
+        backToTopBtn = document.createElement('button');
+        backToTopBtn.id = 'back-to-top';
+        backToTopBtn.className = 'back-to-top';
+        backToTopBtn.setAttribute('aria-label', 'Back to top');
+        backToTopBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/>
+            </svg>
+        `;
+        document.body.appendChild(backToTopBtn);
+        
+        // Scroll to top on click
+        backToTopBtn.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+    
+    // Show/hide button based on scroll position
+    window.addEventListener('scroll', function() {
+        if (window.pageYOffset > 300) {
+            backToTopBtn.classList.add('show');
+        } else {
+            backToTopBtn.classList.remove('show');
+        }
+    });
+}
