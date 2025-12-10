@@ -41,14 +41,23 @@
                         <button class="btn btn-sm btn-secondary" id="toggle-inactive-btn" onclick="toggleInactiveCompanies()" style="margin-right: 10px;">
                             <?php echo ($showInactive ?? false) ? 'Hide Inactive' : 'Show Inactive'; ?>
                         </button>
-                        <input type="text" id="company-search" placeholder="Search companies..." class="search-input">
+                        <div class="searchable-dropdown" style="position: relative;">
+                            <input type="text" id="company-search" placeholder="Search companies..." class="search-input" autocomplete="off" style="min-width: 250px;">
+                            <div id="company-dropdown" class="dropdown-list" style="display: none;"></div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="companies-grid">
                     <?php if (!empty($companies)): ?>
                         <?php foreach ($companies as $company): ?>
-                            <div class="company-card" data-company-id="<?php echo $company['id']; ?>">
+                            <div class="company-card" 
+                                 data-company-id="<?php echo $company['id']; ?>"
+                                 data-company-name="<?php echo htmlspecialchars(strtolower($company['name'])); ?>"
+                                 data-contact-person="<?php echo htmlspecialchars(strtolower($company['contact_person'] ?? '')); ?>"
+                                 data-email="<?php echo htmlspecialchars(strtolower($company['email'] ?? '')); ?>"
+                                 data-phone="<?php echo htmlspecialchars($company['phone'] ?? ''); ?>"
+                                 data-status="<?php echo htmlspecialchars($company['status']); ?>">
                                 <div class="company-header">
                                     <h4><?php echo htmlspecialchars($company['name']); ?></h4>
                                     <span class="status-badge status-<?php echo $company['status']; ?>">

@@ -104,6 +104,193 @@ function initializeEventListeners() {
     if (loadsheetSearch) {
         loadsheetSearch.addEventListener('input', filterLoadSheets);
     }
+    
+    // Company filtering - searchable dropdown
+    const companySearch = document.getElementById('company-search');
+    const companyDropdown = document.getElementById('company-dropdown');
+    
+    if (companySearch && companyDropdown) {
+        initCompanySearchableDropdown();
+    }
+}
+
+function initCompanySearchableDropdown() {
+    const companySearch = document.getElementById('company-search');
+    const companyDropdown = document.getElementById('company-dropdown');
+    const companyCards = document.querySelectorAll('.company-card');
+    
+    if (!companySearch || !companyDropdown || !companyCards.length) return;
+    
+    // Get all companies data
+    const companies = [];
+    companyCards.forEach(card => {
+        companies.push({
+            id: card.getAttribute('data-company-id'),
+            name: card.querySelector('.company-header h4').textContent.trim(),
+            card: card
+        });
+    });
+    
+    let selectedCompanyId = null;
+    let filteredCompanies = companies;
+    
+    // Render dropdown items
+    function renderDropdown(items) {
+        if (items.length === 0) {
+            companyDropdown.innerHTML = '<div class="dropdown-no-results">No companies found</div>';
+            companyDropdown.style.display = 'block';
+            return;
+        }
+        
+        companyDropdown.innerHTML = items.map((company, index) => {
+            const isSelected = selectedCompanyId === company.id;
+            return `<div class="dropdown-item ${isSelected ? 'selected' : ''}" 
+                         data-company-id="${company.id}" 
+                         data-index="${index}">
+                    ${escapeHtml(company.name)}
+                </div>`;
+        }).join('');
+        
+        companyDropdown.style.display = 'block';
+    }
+    
+    // Filter companies based on search input
+    function filterCompanies(searchValue) {
+        if (!searchValue.trim()) {
+            filteredCompanies = companies;
+            renderDropdown(companies);
+            return;
+        }
+        
+        const searchLower = searchValue.toLowerCase();
+        filteredCompanies = companies.filter(company => 
+            company.name.toLowerCase().includes(searchLower)
+        );
+        
+        renderDropdown(filteredCompanies);
+    }
+    
+    // Handle search input
+    companySearch.addEventListener('input', function(e) {
+        const value = e.target.value;
+        filterCompanies(value);
+        
+        // If cleared, show all companies
+        if (!value.trim()) {
+            selectedCompanyId = null;
+            showAllCompanies();
+        }
+    });
+    
+    // Handle dropdown item click
+    companyDropdown.addEventListener('click', function(e) {
+        const item = e.target.closest('.dropdown-item');
+        if (item) {
+            const companyId = item.getAttribute('data-company-id');
+            const company = companies.find(c => c.id === companyId);
+            
+            if (company) {
+                selectedCompanyId = companyId;
+                companySearch.value = company.name;
+                filterCompaniesBySelection(companyId);
+                companyDropdown.style.display = 'none';
+            }
+        }
+    });
+    
+    // Handle keyboard navigation
+    let highlightedIndex = -1;
+    companySearch.addEventListener('keydown', function(e) {
+        const items = companyDropdown.querySelectorAll('.dropdown-item');
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            highlightedIndex = Math.min(highlightedIndex + 1, items.length - 1);
+            updateHighlight(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            highlightedIndex = Math.max(highlightedIndex - 1, -1);
+            updateHighlight(items);
+        } else if (e.key === 'Enter' && highlightedIndex >= 0 && items[highlightedIndex]) {
+            e.preventDefault();
+            items[highlightedIndex].click();
+        } else if (e.key === 'Escape') {
+            companyDropdown.style.display = 'none';
+            highlightedIndex = -1;
+        }
+    });
+    
+    function updateHighlight(items) {
+        items.forEach((item, index) => {
+            item.classList.toggle('highlight', index === highlightedIndex);
+        });
+        if (highlightedIndex >= 0 && items[highlightedIndex]) {
+            items[highlightedIndex].scrollIntoView({ block: 'nearest' });
+        }
+    }
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!companySearch.contains(e.target) && !companyDropdown.contains(e.target)) {
+            companyDropdown.style.display = 'none';
+            highlightedIndex = -1;
+        }
+    });
+    
+    // Show all companies
+    function showAllCompanies() {
+        companyCards.forEach(card => {
+            card.style.display = '';
+        });
+        updateNoResultsMessage(companyCards.length);
+    }
+    
+    // Filter companies by selection
+    function filterCompaniesBySelection(companyId) {
+        let visibleCount = 0;
+        
+        companyCards.forEach(card => {
+            if (card.getAttribute('data-company-id') === companyId) {
+                card.style.display = '';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+        
+        updateNoResultsMessage(visibleCount);
+    }
+    
+    // Update no results message
+    function updateNoResultsMessage(visibleCount) {
+        const companiesGrid = document.querySelector('.companies-grid');
+        let noDataMessage = companiesGrid ? companiesGrid.querySelector('.no-results-message') : null;
+        
+        if (visibleCount === 0 && companyCards.length > 0) {
+            if (!noDataMessage && companiesGrid) {
+                noDataMessage = document.createElement('div');
+                noDataMessage.className = 'no-results-message';
+                noDataMessage.style.gridColumn = '1 / -1';
+                noDataMessage.style.textAlign = 'center';
+                noDataMessage.style.padding = '2rem';
+                noDataMessage.style.color = '#666';
+                noDataMessage.innerHTML = '<p>No companies match your search criteria.</p>';
+                companiesGrid.appendChild(noDataMessage);
+            }
+            if (noDataMessage) {
+                noDataMessage.style.display = 'block';
+            }
+        } else if (noDataMessage) {
+            noDataMessage.style.display = 'none';
+        }
+    }
+    
+    // Focus on search input shows dropdown
+    companySearch.addEventListener('focus', function() {
+        if (filteredCompanies.length > 0) {
+            renderDropdown(filteredCompanies);
+        }
+    });
 }
 
 function createInvoice(loadSheetId) {
@@ -1972,6 +2159,7 @@ function updateInvoiceSummary(totalCount, pendingTotal, paidTotal) {
         paidAmountCard.textContent = 'R ' + paidTotal.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 }
+
 
 function exportStatements() {
     showNotification('Export functionality coming soon!', 'info');
