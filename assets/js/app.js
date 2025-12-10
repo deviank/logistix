@@ -170,10 +170,18 @@ function initCompanySearchableDropdown() {
         renderDropdown(filteredCompanies);
     }
     
+    // Get clear button
+    const clearBtn = document.getElementById('company-search-clear');
+    
     // Handle search input
     companySearch.addEventListener('input', function(e) {
         const value = e.target.value;
         filterCompanies(value);
+        
+        // Show/hide clear button
+        if (clearBtn) {
+            clearBtn.style.display = value.trim() ? 'flex' : 'none';
+        }
         
         // If cleared, show all companies
         if (!value.trim()) {
@@ -291,6 +299,46 @@ function initCompanySearchableDropdown() {
             renderDropdown(filteredCompanies);
         }
     });
+    
+    // Show clear button when there's text
+    if (clearBtn && companySearch.value.trim()) {
+        clearBtn.style.display = 'flex';
+    }
+}
+
+function clearCompanySearch() {
+    const companySearch = document.getElementById('company-search');
+    const companyDropdown = document.getElementById('company-dropdown');
+    const clearBtn = document.getElementById('company-search-clear');
+    const companyCards = document.querySelectorAll('.company-card');
+    
+    // Clear search input
+    if (companySearch) {
+        companySearch.value = '';
+        companySearch.focus();
+    }
+    
+    // Hide clear button
+    if (clearBtn) {
+        clearBtn.style.display = 'none';
+    }
+    
+    // Hide dropdown
+    if (companyDropdown) {
+        companyDropdown.style.display = 'none';
+    }
+    
+    // Show all companies
+    companyCards.forEach(card => {
+        card.style.display = '';
+    });
+    
+    // Remove no results message
+    const companiesGrid = document.querySelector('.companies-grid');
+    const noDataMessage = companiesGrid ? companiesGrid.querySelector('.no-results-message') : null;
+    if (noDataMessage) {
+        noDataMessage.style.display = 'none';
+    }
 }
 
 function createInvoice(loadSheetId) {
