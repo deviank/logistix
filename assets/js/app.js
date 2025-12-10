@@ -1831,7 +1831,7 @@ function updateLoadSheetStatusTotal(statusValue, count, totalRevenue) {
         
         totalRow.innerHTML = `
             <td colspan="4" style="text-align: right; padding: 0.75rem;">
-                <strong>Total ${statusLabel} Load Sheets:</strong> ${count} | <strong>Total Revenue:</strong> ${formattedRevenue}
+                <strong>Total ${statusLabel} Load Sheets:</strong> ${count}
             </td>
             <td style="padding: 0.75rem; text-align: right;">
                 <strong>${formattedRevenue}</strong>
