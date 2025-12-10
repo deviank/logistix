@@ -35,7 +35,6 @@
                     <div class="section-actions">
                         <select id="status-filter" class="filter-select">
                             <option value="">All Status</option>
-                            <option value="pending">Pending</option>
                             <option value="in_progress">In Progress</option>
                             <option value="completed">Completed</option>
                         </select>

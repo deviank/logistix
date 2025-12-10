@@ -33,7 +33,6 @@
                     <label for="status-filter">Payment Status:</label>
                     <select id="status-filter" class="filter-select">
                         <option value="">All Status</option>
-                        <option value="pending">Pending</option>
                         <option value="paid">Paid</option>
                         <option value="overdue">Overdue</option>
                     </select>
