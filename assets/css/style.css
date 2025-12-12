@@ -561,6 +561,7 @@ body {
     border-radius: 8px;
     font-size: 0.9rem;
     background: white;
+    color: #333;
     cursor: pointer;
     transition: border-color 0.3s;
 }
@@ -954,6 +955,7 @@ body {
     border-radius: 8px;
     font-size: 1rem;
     background: white;
+    color: #333;
     cursor: pointer;
     transition: border-color 0.3s;
 }
