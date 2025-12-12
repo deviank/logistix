@@ -27,7 +27,9 @@
                 <p>Manage your customer companies and their billing information</p>
                 <div style="display: flex; gap: 10px;">
                     <button class="btn btn-primary" onclick="showAddCompanyForm()">Add New Company</button>
+                    <button class="btn btn-info" onclick="generateDummyCompanies()" title="Generate random South African companies for testing">Generate Dummy Companies</button>
                     <button class="btn btn-info" onclick="generateDummyInvoiceData()" title="Generate random invoice history for the past 2 years">Generate Invoice History</button>
+                    <button class="btn btn-warning" onclick="removeDuplicateCompanies()" title="Remove duplicate companies (keeps the one with most data)">Remove Duplicates</button>
                 </div>
             </div>
 
@@ -39,14 +41,30 @@
                         <button class="btn btn-sm btn-secondary" id="toggle-inactive-btn" onclick="toggleInactiveCompanies()" style="margin-right: 10px;">
                             <?php echo ($showInactive ?? false) ? 'Hide Inactive' : 'Show Inactive'; ?>
                         </button>
-                        <input type="text" id="company-search" placeholder="Search companies..." class="search-input">
+                        <div class="searchable-dropdown" style="position: relative;">
+                            <div style="position: relative; display: inline-block;">
+                                <input type="text" id="company-search" placeholder="Search companies..." class="search-input" autocomplete="off" style="min-width: 250px; padding-right: 35px;">
+                                <button type="button" id="company-search-clear" class="search-clear-btn" style="display: none;" onclick="clearCompanySearch()" aria-label="Clear search">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: #666;">
+                                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div id="company-dropdown" class="dropdown-list" style="display: none;"></div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="companies-grid">
                     <?php if (!empty($companies)): ?>
                         <?php foreach ($companies as $company): ?>
-                            <div class="company-card" data-company-id="<?php echo $company['id']; ?>">
+                            <div class="company-card" 
+                                 data-company-id="<?php echo $company['id']; ?>"
+                                 data-company-name="<?php echo htmlspecialchars(strtolower($company['name'])); ?>"
+                                 data-contact-person="<?php echo htmlspecialchars(strtolower($company['contact_person'] ?? '')); ?>"
+                                 data-email="<?php echo htmlspecialchars(strtolower($company['email'] ?? '')); ?>"
+                                 data-phone="<?php echo htmlspecialchars($company['phone'] ?? ''); ?>"
+                                 data-status="<?php echo htmlspecialchars($company['status']); ?>">
                                 <div class="company-header">
                                     <h4><?php echo htmlspecialchars($company['name']); ?></h4>
                                     <span class="status-badge status-<?php echo $company['status']; ?>">

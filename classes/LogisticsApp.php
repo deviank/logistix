@@ -118,6 +118,12 @@ class LogisticsApp {
             case 'generate_dummy_invoices':
                 $this->generateDummyInvoiceData();
                 break;
+            case 'generate_dummy_companies':
+                $this->generateDummyCompanies();
+                break;
+            case 'remove_duplicate_companies':
+                $this->removeDuplicateCompanies();
+                break;
             case 'create_loadsheet':
                 $this->createLoadSheet();
                 break;
@@ -584,6 +590,141 @@ class LogisticsApp {
         return $invoiceNumber;
     }
     
+    public function generateDummyCompanies() {
+        try {
+            // South African company names
+            $companyNames = [
+                'Cape Town Logistics', 'Johannesburg Freight Solutions', 'Durban Transport Co',
+                'Pretoria Distribution', 'Port Elizabeth Shipping', 'Bloemfontein Logistics',
+                'East London Transport', 'Nelspruit Freight Services', 'Polokwane Distribution',
+                'Kimberley Logistics', 'Rustenburg Transport', 'Witbank Freight Solutions',
+                'Pietermaritzburg Logistics', 'George Transport Co', 'Potchefstroom Distribution',
+                'Welkom Freight Services', 'Klerksdorp Logistics', 'Upington Transport',
+                'Middelburg Freight', 'Vereeniging Logistics', 'Sasolburg Transport',
+                'Springs Distribution', 'Benoni Freight Solutions', 'Boksburg Logistics',
+                'Germiston Transport', 'Kempton Park Freight', 'Alberton Distribution',
+                'Randburg Logistics', 'Sandton Transport Co', 'Roodepoort Freight'
+            ];
+            
+            // South African first names
+            $firstNames = [
+                'Thabo', 'Sipho', 'Lungile', 'Nomsa', 'Bongani', 'Zanele', 'Mandla', 'Thandi',
+                'Sibusiso', 'Ntombi', 'Mpho', 'Lindiwe', 'Kagiso', 'Nolwazi', 'Tshepo', 'Zinhle',
+                'John', 'Sarah', 'Michael', 'Jennifer', 'David', 'Lisa', 'James', 'Michelle',
+                'Robert', 'Amanda', 'William', 'Nicole', 'Richard', 'Jessica', 'Daniel', 'Ashley'
+            ];
+            
+            // South African last names
+            $lastNames = [
+                'Mthembu', 'Ndlovu', 'Khumalo', 'Dlamini', 'Mkhize', 'Nkosi', 'Zulu', 'Molefe',
+                'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis',
+                'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Wilson', 'Anderson', 'Thomas', 'Taylor'
+            ];
+            
+            // South African cities and addresses
+            $cities = [
+                'Johannesburg', 'Cape Town', 'Durban', 'Pretoria', 'Port Elizabeth', 'Bloemfontein',
+                'East London', 'Nelspruit', 'Polokwane', 'Kimberley', 'Rustenburg', 'Witbank',
+                'Pietermaritzburg', 'George', 'Potchefstroom', 'Welkom', 'Klerksdorp', 'Upington'
+            ];
+            
+            $streets = [
+                'Main Road', 'Church Street', 'High Street', 'Market Street', 'Long Street',
+                'Victoria Street', 'King Street', 'Queen Street', 'Oxford Road', 'Rivonia Road',
+                'Jan Smuts Avenue', 'William Nicol Drive', 'Louis Botha Avenue', 'Jan Hofmeyr Road'
+            ];
+            
+            // Company types/suffixes
+            $companyTypes = ['Pty Ltd', 'Ltd', 'CC', 'Inc', 'Logistics', 'Transport', 'Freight', 'Distribution'];
+            
+            $numCompanies = rand(10, 25); // Generate 10-25 companies
+            $created = 0;
+            $skipped = 0;
+            
+            for ($i = 0; $i < $numCompanies; $i++) {
+                // Random company name
+                $baseName = $companyNames[array_rand($companyNames)];
+                $companyType = $companyTypes[array_rand($companyTypes)];
+                $companyName = $baseName . ' ' . $companyType;
+                
+                // Check if company already exists
+                $existing = $this->db->fetchOne("SELECT id FROM companies WHERE name = ?", [$companyName]);
+                if ($existing) {
+                    $skipped++;
+                    continue;
+                }
+                
+                // Random contact person
+                $firstName = $firstNames[array_rand($firstNames)];
+                $lastName = $lastNames[array_rand($lastNames)];
+                $contactPerson = $firstName . ' ' . $lastName;
+                
+                // Generate email (South African format)
+                $emailDomains = ['co.za', 'com', 'net', 'org.za'];
+                $emailDomain = $emailDomains[array_rand($emailDomains)];
+                $emailPrefix = strtolower(str_replace(' ', '', $firstName . '.' . $lastName));
+                $email = $emailPrefix . '@' . (rand(1, 100) > 50 ? 'example.' : '') . $emailDomain;
+                
+                // South African phone number format
+                $areaCodes = ['011', '021', '031', '012', '041', '051', '043', '013', '015', '053', '014', '016', '033', '044', '018', '057', '018', '054'];
+                $areaCode = $areaCodes[array_rand($areaCodes)];
+                $phoneNumber = rand(100, 999) . ' ' . rand(1000, 9999);
+                $phone = $areaCode . '-' . $phoneNumber;
+                
+                // Generate address
+                $streetNumber = rand(1, 999);
+                $street = $streets[array_rand($streets)];
+                $city = $cities[array_rand($cities)];
+                $postalCode = rand(1000, 9999);
+                $billingAddress = $streetNumber . ' ' . $street . ', ' . $city . ', ' . $postalCode;
+                
+                // Generate VAT number (South African format: 10 digits starting with 4)
+                $vatNumber = '4' . str_pad(rand(0, 999999999), 9, '0', STR_PAD_LEFT);
+                
+                // Payment terms (mostly 30 days, some 15, 45, 60)
+                $paymentTermsOptions = [15, 30, 30, 30, 30, 45, 60]; // Weighted towards 30
+                $paymentTerms = $paymentTermsOptions[array_rand($paymentTermsOptions)];
+                
+                // Rate per pallet (R 500 - R 5000)
+                $ratePerPallet = round(rand(50000, 500000) / 100, 2);
+                
+                // Status (mostly active, some inactive)
+                $status = rand(1, 100) <= 85 ? 'active' : 'inactive';
+                
+                // Random creation date within the past year
+                $daysAgo = rand(0, 365);
+                $createdAt = date('Y-m-d H:i:s', strtotime("-{$daysAgo} days"));
+                
+                $companyData = [
+                    'name' => $companyName,
+                    'contact_person' => $contactPerson,
+                    'email' => $email,
+                    'phone' => $phone,
+                    'billing_address' => $billingAddress,
+                    'vat_number' => $vatNumber,
+                    'payment_terms' => $paymentTerms,
+                    'rate_per_pallet' => $ratePerPallet,
+                    'status' => $status,
+                    'created_at' => $createdAt
+                ];
+                
+                $companyId = $this->db->insert('companies', $companyData);
+                if ($companyId) {
+                    $created++;
+                }
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'message' => "Generated {$created} new companies" . ($skipped > 0 ? " ({$skipped} skipped - already exist)" : ''),
+                'created' => $created,
+                'skipped' => $skipped
+            ]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Error generating companies: ' . $e->getMessage()]);
+        }
+    }
+    
     private function generateInvoiceNumber() {
         $year = date('Y');
         $month = date('m');
@@ -841,6 +982,87 @@ class LogisticsApp {
             }
         } else {
             echo json_encode(['success' => false, 'message' => 'Only inactive companies can be deleted']);
+        }
+    }
+    
+    public function removeDuplicateCompanies() {
+        try {
+            // Get all companies with their data counts
+            $allCompanies = $this->db->fetchAll("
+                SELECT c.*,
+                       (SELECT COUNT(*) FROM invoices WHERE company_id = c.id) as invoice_count,
+                       (SELECT COUNT(*) FROM load_sheets WHERE company_id = c.id) as loadsheet_count,
+                       (SELECT COUNT(*) FROM statements WHERE company_id = c.id) as statement_count
+                FROM companies c
+                ORDER BY c.name
+            ");
+            
+            // Group companies by base name (without common suffixes)
+            $groups = [];
+            foreach ($allCompanies as $company) {
+                $name = strtolower(trim($company['name']));
+                // Remove common suffixes to find base name
+                $baseName = preg_replace('/\s+(pty\s+ltd|ltd|cc|inc|logistics|transport|freight|distribution|solutions|co)$/i', '', $name);
+                $baseName = trim($baseName);
+                
+                if (!isset($groups[$baseName])) {
+                    $groups[$baseName] = [];
+                }
+                $groups[$baseName][] = $company;
+            }
+            
+            $deleted = 0;
+            $kept = 0;
+            $groupsProcessed = 0;
+            
+            foreach ($groups as $baseName => $companies) {
+                if (count($companies) <= 1) {
+                    continue; // Skip if only one company in group
+                }
+                
+                $groupsProcessed++;
+                
+                // Sort by: most data first, then by creation date (oldest first)
+                usort($companies, function($a, $b) {
+                    $aScore = ($a['invoice_count'] * 3) + ($a['loadsheet_count'] * 2) + ($a['statement_count'] * 2);
+                    $bScore = ($b['invoice_count'] * 3) + ($b['loadsheet_count'] * 2) + ($b['statement_count'] * 2);
+                    
+                    if ($aScore !== $bScore) {
+                        return $bScore - $aScore; // Higher score first
+                    }
+                    
+                    // If same score, keep the oldest one
+                    return strtotime($a['created_at']) - strtotime($b['created_at']);
+                });
+                
+                // Keep the first one (best company), delete the rest
+                $keepId = $companies[0]['id'];
+                $kept++;
+                
+                for ($i = 1; $i < count($companies); $i++) {
+                    $deleteId = $companies[$i]['id'];
+                    // Set status to inactive first (safer approach)
+                    $this->db->update('companies', ['status' => 'inactive'], 'id = ?', [$deleteId]);
+                    // Then delete (CASCADE will handle related records)
+                    $this->db->delete('companies', 'id = ?', [$deleteId]);
+                    $deleted++;
+                }
+            }
+            
+            if ($deleted === 0) {
+                echo json_encode(['success' => true, 'message' => 'No duplicate companies found', 'deleted' => 0]);
+                return;
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'message' => "Removed {$deleted} duplicate companies from {$groupsProcessed} groups. Kept {$kept} companies.",
+                'deleted' => $deleted,
+                'kept' => $kept,
+                'groups' => $groupsProcessed
+            ]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Error removing duplicates: ' . $e->getMessage()]);
         }
     }
     

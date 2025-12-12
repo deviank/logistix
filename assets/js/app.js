@@ -17,6 +17,9 @@ function initializeApp() {
     // Load contractors when app initializes
     loadContractors();
     
+    // Initialize back to top button
+    initBackToTopButton();
+    
     // Auto-refresh stats every 5 minutes
     setInterval(refreshStats, 300000);
 }
@@ -77,18 +80,264 @@ function initializeEventListeners() {
     }
     
     // Invoice filtering
-    const statusFilter = document.getElementById('status-filter');
+    const invoiceStatusFilter = document.getElementById('status-filter');
     const dateFilter = document.getElementById('date-filter');
-    const invoiceSearch = document.getElementById('invoice-search');
+    const companyFilter = document.getElementById('company-filter');
     
-    if (statusFilter) {
-        statusFilter.addEventListener('change', filterInvoices);
+    if (invoiceStatusFilter && document.querySelector('.invoice-row')) {
+        invoiceStatusFilter.addEventListener('change', filterInvoices);
     }
     if (dateFilter) {
         dateFilter.addEventListener('change', filterInvoices);
     }
-    if (invoiceSearch) {
-        invoiceSearch.addEventListener('input', filterInvoices);
+    if (companyFilter) {
+        companyFilter.addEventListener('change', filterInvoices);
+    }
+    
+    // Loadsheet filtering
+    const loadsheetStatusFilter = document.getElementById('status-filter');
+    const loadsheetSearch = document.getElementById('loadsheet-search');
+    
+    if (loadsheetStatusFilter && document.querySelector('.loadsheet-row')) {
+        loadsheetStatusFilter.addEventListener('change', filterLoadSheets);
+    }
+    if (loadsheetSearch) {
+        loadsheetSearch.addEventListener('input', filterLoadSheets);
+    }
+    
+    // Company filtering - searchable dropdown
+    const companySearch = document.getElementById('company-search');
+    const companyDropdown = document.getElementById('company-dropdown');
+    
+    if (companySearch && companyDropdown) {
+        initCompanySearchableDropdown();
+    }
+}
+
+function initCompanySearchableDropdown() {
+    const companySearch = document.getElementById('company-search');
+    const companyDropdown = document.getElementById('company-dropdown');
+    const companyCards = document.querySelectorAll('.company-card');
+    
+    if (!companySearch || !companyDropdown || !companyCards.length) return;
+    
+    // Get all companies data
+    const companies = [];
+    companyCards.forEach(card => {
+        companies.push({
+            id: card.getAttribute('data-company-id'),
+            name: card.querySelector('.company-header h4').textContent.trim(),
+            card: card
+        });
+    });
+    
+    let selectedCompanyId = null;
+    let filteredCompanies = companies;
+    
+    // Render dropdown items
+    function renderDropdown(items) {
+        if (items.length === 0) {
+            companyDropdown.innerHTML = '<div class="dropdown-no-results">No companies found</div>';
+            companyDropdown.style.display = 'block';
+            return;
+        }
+        
+        companyDropdown.innerHTML = items.map((company, index) => {
+            const isSelected = selectedCompanyId === company.id;
+            return `<div class="dropdown-item ${isSelected ? 'selected' : ''}" 
+                         data-company-id="${company.id}" 
+                         data-index="${index}">
+                    ${escapeHtml(company.name)}
+                </div>`;
+        }).join('');
+        
+        companyDropdown.style.display = 'block';
+    }
+    
+    // Filter companies based on search input
+    function filterCompanies(searchValue) {
+        if (!searchValue.trim()) {
+            filteredCompanies = companies;
+            renderDropdown(companies);
+            return;
+        }
+        
+        const searchLower = searchValue.toLowerCase();
+        filteredCompanies = companies.filter(company => 
+            company.name.toLowerCase().includes(searchLower)
+        );
+        
+        renderDropdown(filteredCompanies);
+    }
+    
+    // Get clear button
+    const clearBtn = document.getElementById('company-search-clear');
+    
+    // Handle search input
+    companySearch.addEventListener('input', function(e) {
+        const value = e.target.value;
+        filterCompanies(value);
+        
+        // Show/hide clear button
+        if (clearBtn) {
+            clearBtn.style.display = value.trim() ? 'flex' : 'none';
+        }
+        
+        // If cleared, show all companies
+        if (!value.trim()) {
+            selectedCompanyId = null;
+            showAllCompanies();
+        }
+    });
+    
+    // Handle dropdown item click
+    companyDropdown.addEventListener('click', function(e) {
+        const item = e.target.closest('.dropdown-item');
+        if (item) {
+            const companyId = item.getAttribute('data-company-id');
+            const company = companies.find(c => c.id === companyId);
+            
+            if (company) {
+                selectedCompanyId = companyId;
+                companySearch.value = company.name;
+                filterCompaniesBySelection(companyId);
+                companyDropdown.style.display = 'none';
+            }
+        }
+    });
+    
+    // Handle keyboard navigation
+    let highlightedIndex = -1;
+    companySearch.addEventListener('keydown', function(e) {
+        const items = companyDropdown.querySelectorAll('.dropdown-item');
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            highlightedIndex = Math.min(highlightedIndex + 1, items.length - 1);
+            updateHighlight(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            highlightedIndex = Math.max(highlightedIndex - 1, -1);
+            updateHighlight(items);
+        } else if (e.key === 'Enter' && highlightedIndex >= 0 && items[highlightedIndex]) {
+            e.preventDefault();
+            items[highlightedIndex].click();
+        } else if (e.key === 'Escape') {
+            companyDropdown.style.display = 'none';
+            highlightedIndex = -1;
+        }
+    });
+    
+    function updateHighlight(items) {
+        items.forEach((item, index) => {
+            item.classList.toggle('highlight', index === highlightedIndex);
+        });
+        if (highlightedIndex >= 0 && items[highlightedIndex]) {
+            items[highlightedIndex].scrollIntoView({ block: 'nearest' });
+        }
+    }
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!companySearch.contains(e.target) && !companyDropdown.contains(e.target)) {
+            companyDropdown.style.display = 'none';
+            highlightedIndex = -1;
+        }
+    });
+    
+    // Show all companies
+    function showAllCompanies() {
+        companyCards.forEach(card => {
+            card.style.display = '';
+        });
+        updateNoResultsMessage(companyCards.length);
+    }
+    
+    // Filter companies by selection
+    function filterCompaniesBySelection(companyId) {
+        let visibleCount = 0;
+        
+        companyCards.forEach(card => {
+            if (card.getAttribute('data-company-id') === companyId) {
+                card.style.display = '';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+        
+        updateNoResultsMessage(visibleCount);
+    }
+    
+    // Update no results message
+    function updateNoResultsMessage(visibleCount) {
+        const companiesGrid = document.querySelector('.companies-grid');
+        let noDataMessage = companiesGrid ? companiesGrid.querySelector('.no-results-message') : null;
+        
+        if (visibleCount === 0 && companyCards.length > 0) {
+            if (!noDataMessage && companiesGrid) {
+                noDataMessage = document.createElement('div');
+                noDataMessage.className = 'no-results-message';
+                noDataMessage.style.gridColumn = '1 / -1';
+                noDataMessage.style.textAlign = 'center';
+                noDataMessage.style.padding = '2rem';
+                noDataMessage.style.color = '#666';
+                noDataMessage.innerHTML = '<p>No companies match your search criteria.</p>';
+                companiesGrid.appendChild(noDataMessage);
+            }
+            if (noDataMessage) {
+                noDataMessage.style.display = 'block';
+            }
+        } else if (noDataMessage) {
+            noDataMessage.style.display = 'none';
+        }
+    }
+    
+    // Focus on search input shows dropdown
+    companySearch.addEventListener('focus', function() {
+        if (filteredCompanies.length > 0) {
+            renderDropdown(filteredCompanies);
+        }
+    });
+    
+    // Show clear button when there's text
+    if (clearBtn && companySearch.value.trim()) {
+        clearBtn.style.display = 'flex';
+    }
+}
+
+function clearCompanySearch() {
+    const companySearch = document.getElementById('company-search');
+    const companyDropdown = document.getElementById('company-dropdown');
+    const clearBtn = document.getElementById('company-search-clear');
+    const companyCards = document.querySelectorAll('.company-card');
+    
+    // Clear search input
+    if (companySearch) {
+        companySearch.value = '';
+        companySearch.focus();
+    }
+    
+    // Hide clear button
+    if (clearBtn) {
+        clearBtn.style.display = 'none';
+    }
+    
+    // Hide dropdown
+    if (companyDropdown) {
+        companyDropdown.style.display = 'none';
+    }
+    
+    // Show all companies
+    companyCards.forEach(card => {
+        card.style.display = '';
+    });
+    
+    // Remove no results message
+    const companiesGrid = document.querySelector('.companies-grid');
+    const noDataMessage = companiesGrid ? companiesGrid.querySelector('.no-results-message') : null;
+    if (noDataMessage) {
+        noDataMessage.style.display = 'none';
     }
 }
 
@@ -310,6 +559,70 @@ function createSampleData() {
     }
     
     showNotification('Sample data already exists in the database!', 'info');
+}
+
+function generateDummyCompanies() {
+    if (!confirm('This will generate random South African companies for testing purposes. Continue?')) {
+        return;
+    }
+    
+    // Show loading notification
+    showNotification('Generating dummy companies...', 'info');
+    
+    fetch('?page=ajax&action=generate_dummy_companies', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(
+                data.message || `Successfully generated ${data.created} companies!`, 
+                'success'
+            );
+            // Reload the page after a short delay to show new companies
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            showNotification('Error: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error generating dummy companies', 'error');
+    });
+}
+
+function removeDuplicateCompanies() {
+    if (!confirm('This will remove duplicate companies (companies with the same name). The company with the most invoices/load sheets will be kept. This action cannot be undone. Continue?')) {
+        return;
+    }
+    
+    // Show loading notification
+    showNotification('Removing duplicate companies...', 'info');
+    
+    fetch('?page=ajax&action=remove_duplicate_companies', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(
+                data.message || `Removed ${data.deleted} duplicate companies.`, 
+                'success'
+            );
+            // Reload the page after a short delay
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            showNotification('Error: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error removing duplicate companies', 'error');
+    });
 }
 
 function generateDummyInvoiceData() {
@@ -1659,17 +1972,129 @@ function exportInvoices() {
     showNotification('Export functionality coming soon!', 'info');
 }
 
+function filterLoadSheets() {
+    const statusFilter = document.getElementById('status-filter');
+    const loadsheetSearch = document.getElementById('loadsheet-search');
+    const loadsheetRows = document.querySelectorAll('.loadsheet-row');
+    
+    if (!loadsheetRows.length) return;
+    
+    const statusValue = statusFilter ? statusFilter.value : '';
+    const searchValue = loadsheetSearch ? loadsheetSearch.value.toLowerCase().trim() : '';
+    
+    let visibleCount = 0;
+    let totalRevenue = 0;
+    
+    loadsheetRows.forEach(row => {
+        const rowStatus = row.getAttribute('data-status') || '';
+        const company = row.getAttribute('data-company') || '';
+        const description = row.getAttribute('data-description') || '';
+        
+        // Status filter - the data-status already has the mapped display value
+        // (pending, in_progress, completed) which matches the filter dropdown
+        let statusMatch = true;
+        if (statusValue) {
+            statusMatch = rowStatus === statusValue;
+        }
+        
+        // Search filter
+        let searchMatch = true;
+        if (searchValue) {
+            searchMatch = company.includes(searchValue) || 
+                         description.includes(searchValue);
+        }
+        
+        // Show/hide row based on filters
+        if (statusMatch && searchMatch) {
+            row.style.display = '';
+            visibleCount++;
+            
+            // Calculate revenue from Rate column (5th column, index 4)
+            const rateCell = row.querySelector('td:nth-child(5)');
+            if (rateCell) {
+                const rateText = rateCell.textContent.replace(/[R\s,]/g, '');
+                const rate = parseFloat(rateText) || 0;
+                totalRevenue += rate;
+            }
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    // Update status column total
+    updateLoadSheetStatusTotal(statusValue, visibleCount, totalRevenue);
+    
+    // Show "no results" message if needed
+    const tbody = document.querySelector('.loadsheets-table tbody');
+    let noDataRow = tbody ? tbody.querySelector('.no-results-row') : null;
+    
+    if (visibleCount === 0 && loadsheetRows.length > 0) {
+        if (!noDataRow && tbody) {
+            noDataRow = document.createElement('tr');
+            noDataRow.className = 'no-results-row';
+            noDataRow.innerHTML = '<td colspan="7" class="no-data">No load sheets match the current filters.</td>';
+            tbody.appendChild(noDataRow);
+        }
+        if (noDataRow) {
+            noDataRow.style.display = '';
+        }
+    } else if (noDataRow) {
+        noDataRow.style.display = 'none';
+    }
+}
+
+function updateLoadSheetStatusTotal(statusValue, count, totalRevenue) {
+    const tbody = document.querySelector('.loadsheets-table tbody');
+    if (!tbody) return;
+    
+    // Remove existing total row
+    const existingTotalRow = tbody.querySelector('.status-total-row');
+    if (existingTotalRow) {
+        existingTotalRow.remove();
+    }
+    
+    // Only show total if a status is selected
+    if (statusValue && count > 0) {
+        const totalRow = document.createElement('tr');
+        totalRow.className = 'status-total-row';
+        totalRow.style.fontWeight = 'bold';
+        totalRow.style.backgroundColor = '#f8f9fa';
+        totalRow.style.borderTop = '2px solid #007cba';
+        
+        const statusLabel = statusValue === 'pending' ? 'Pending' : 
+                           statusValue === 'in_progress' ? 'In Progress' : 
+                           statusValue === 'completed' ? 'Completed' : statusValue;
+        
+        const formattedRevenue = 'R ' + totalRevenue.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        
+        totalRow.innerHTML = `
+            <td colspan="4" style="text-align: right; padding: 0.75rem;">
+                <strong>Total ${statusLabel} Load Sheets:</strong> ${count}
+            </td>
+            <td style="padding: 0.75rem; text-align: right;">
+                <strong>${formattedRevenue}</strong>
+            </td>
+            <td style="padding: 0.75rem;">
+                <span class="status-badge status-${statusValue}">${count}</span>
+            </td>
+            <td style="padding: 0.75rem;"></td>
+        `;
+        
+        tbody.appendChild(totalRow);
+    }
+}
+
 function filterInvoices() {
     const statusFilter = document.getElementById('status-filter');
     const dateFilter = document.getElementById('date-filter');
-    const invoiceSearch = document.getElementById('invoice-search');
+    const companyFilter = document.getElementById('company-filter');
     const invoiceRows = document.querySelectorAll('.invoice-row');
     
     if (!invoiceRows.length) return;
     
     const statusValue = statusFilter ? statusFilter.value : '';
     const dateValue = dateFilter ? dateFilter.value : '';
-    const searchValue = invoiceSearch ? invoiceSearch.value.toLowerCase().trim() : '';
+    const companyValue = companyFilter ? companyFilter.value : '';
     
     // Calculate date range if needed
     let dateStart = null;
@@ -1705,9 +2130,7 @@ function filterInvoices() {
     invoiceRows.forEach(row => {
         const rowStatus = row.getAttribute('data-status') || '';
         const rowDate = row.getAttribute('data-invoice-date');
-        const invoiceNumber = row.getAttribute('data-invoice-number') || '';
-        const company = row.getAttribute('data-company') || '';
-        const description = row.getAttribute('data-description') || '';
+        const companyId = row.getAttribute('data-company-id') || '';
         
         // Status filter
         let statusMatch = !statusValue || rowStatus === statusValue;
@@ -1719,16 +2142,14 @@ function filterInvoices() {
             dateMatch = invoiceDate >= dateStart && invoiceDate <= dateEnd;
         }
         
-        // Search filter
-        let searchMatch = true;
-        if (searchValue) {
-            searchMatch = invoiceNumber.includes(searchValue) || 
-                         company.includes(searchValue) || 
-                         description.includes(searchValue);
+        // Company filter
+        let companyMatch = true;
+        if (companyValue) {
+            companyMatch = companyId === companyValue;
         }
         
         // Show/hide row based on all filters
-        if (statusMatch && dateMatch && searchMatch) {
+        if (statusMatch && dateMatch && companyMatch) {
             row.style.display = '';
             visibleCount++;
             
@@ -1754,16 +2175,18 @@ function filterInvoices() {
     
     // Show "no results" message if needed
     const tbody = document.querySelector('.invoices-table tbody');
-    let noDataRow = tbody.querySelector('.no-results-row');
+    let noDataRow = tbody ? tbody.querySelector('.no-results-row') : null;
     
     if (visibleCount === 0 && invoiceRows.length > 0) {
-        if (!noDataRow) {
+        if (!noDataRow && tbody) {
             noDataRow = document.createElement('tr');
             noDataRow.className = 'no-results-row';
             noDataRow.innerHTML = '<td colspan="11" class="no-data">No invoices match the current filters.</td>';
             tbody.appendChild(noDataRow);
         }
-        noDataRow.style.display = '';
+        if (noDataRow) {
+            noDataRow.style.display = '';
+        }
     } else if (noDataRow) {
         noDataRow.style.display = 'none';
     }
@@ -1784,6 +2207,7 @@ function updateInvoiceSummary(totalCount, pendingTotal, paidTotal) {
         paidAmountCard.textContent = 'R ' + paidTotal.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 }
+
 
 function exportStatements() {
     showNotification('Export functionality coming soon!', 'info');
@@ -1811,3 +2235,37 @@ document.addEventListener('keydown', function(event) {
         closeStatementModal();
     }
 });
+
+function initBackToTopButton() {
+    // Create back to top button if it doesn't exist
+    let backToTopBtn = document.getElementById('back-to-top');
+    if (!backToTopBtn) {
+        backToTopBtn = document.createElement('button');
+        backToTopBtn.id = 'back-to-top';
+        backToTopBtn.className = 'back-to-top';
+        backToTopBtn.setAttribute('aria-label', 'Back to top');
+        backToTopBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/>
+            </svg>
+        `;
+        document.body.appendChild(backToTopBtn);
+        
+        // Scroll to top on click
+        backToTopBtn.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+    
+    // Show/hide button based on scroll position
+    window.addEventListener('scroll', function() {
+        if (window.pageYOffset > 300) {
+            backToTopBtn.classList.add('show');
+        } else {
+            backToTopBtn.classList.remove('show');
+        }
+    });
+}

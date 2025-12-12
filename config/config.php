@@ -6,7 +6,7 @@
 // Application settings
 define('APP_NAME', 'Logistics Management System');
 define('APP_VERSION', '1.0.0');
-define('APP_URL', 'http://localhost/logistix');
+define('APP_URL', 'http://localhost/logistics-app');
 
 // File paths
 define('ROOT_PATH', __DIR__ . '/../');

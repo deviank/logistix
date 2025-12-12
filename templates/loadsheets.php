@@ -35,7 +35,6 @@
                     <div class="section-actions">
                         <select id="status-filter" class="filter-select">
                             <option value="">All Status</option>
-                            <option value="pending">Pending</option>
                             <option value="in_progress">In Progress</option>
                             <option value="completed">Completed</option>
                         </select>
@@ -59,7 +58,12 @@
                         <tbody>
                             <?php if (!empty($loadSheets)): ?>
                                 <?php foreach ($loadSheets as $loadSheet): ?>
-                                    <tr data-loadsheet-id="<?php echo $loadSheet['id']; ?>">
+                                    <tr data-loadsheet-id="<?php echo $loadSheet['id']; ?>" 
+                                        class="loadsheet-row"
+                                        data-status="<?php echo htmlspecialchars($loadSheet['status']); ?>"
+                                        data-company="<?php echo htmlspecialchars(strtolower($loadSheet['company_name'])); ?>"
+                                        data-description="<?php echo htmlspecialchars(strtolower($loadSheet['cargo_description'] ?? '')); ?>"
+                                        data-date="<?php echo date('Y-m-d', strtotime($loadSheet['created_at'])); ?>">
                                         <td><?php echo date('M j, Y', strtotime($loadSheet['created_at'])); ?></td>
                                         <td><?php echo htmlspecialchars($loadSheet['company_name']); ?></td>
                                         <td><?php echo $loadSheet['pallet_quantity']; ?></td>
