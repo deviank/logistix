@@ -131,3 +131,7 @@ error_reporting(E_ALL);
 ## Support
 
 For issues or questions, check the browser console (F12) for JavaScript errors and PHP error logs for server-side issues.
+
+## Learning
+
+- [Build an LLM from scratch](LLM-FROM-SCRATCH.md)
