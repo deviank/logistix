@@ -11,7 +11,10 @@ Use this file to track what you want to work on in your next session.
 ## Ideas & Notes
 
 - Hover or click on Dashboard Overview tiles for invoices should show a history graph (this could lead to a planner should turnover be different every month)
-- A tile in the dasboard area to measure the prvious months take ins or turnovers for my brother in law use to seee how the month is tracking or profitable
+
+- On the Company Management dashboard there should be functionality for when the user clicks on the tile for a particular client it should open up a new browser tab with all of that companies details which would info like historical orders and graphs.
+
+- On the Company Management dashboard Add a clear button on filter fields which should return all companies
 
 ## Issues picked up
 
