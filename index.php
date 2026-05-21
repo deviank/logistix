@@ -45,6 +45,9 @@ switch ($page) {
     case 'statements':
         $app->showStatements();
         break;
+    case 'game_ideas':
+        $app->showGameIdeas();
+        break;
     case 'ajax':
         // Ensure clean JSON-only output for AJAX
         if (function_exists('ob_get_level')) {
