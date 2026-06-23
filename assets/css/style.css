@@ -516,6 +516,80 @@ body {
     padding: 2rem;
 }
 
+/* Game Idea Generator */
+.game-generator-header {
+    align-items: center;
+}
+
+.game-generator-header h2 {
+    margin-bottom: 0.5rem;
+}
+
+.generator-layout {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 1.5rem;
+}
+
+.generator-card {
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 1.5rem;
+}
+
+.generator-card h3 {
+    color: #007cba;
+    margin-bottom: 1rem;
+}
+
+.hook-list {
+    padding-left: 1.25rem;
+    display: grid;
+    gap: 0.75rem;
+}
+
+.idea-one-liner {
+    font-size: 1rem;
+    color: #555;
+    margin-bottom: 1rem;
+}
+
+.idea-meta {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+    background: #fff;
+    padding: 0.9rem;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.idea-block {
+    margin-top: 1rem;
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.idea-block h4 {
+    color: #007cba;
+    margin-bottom: 0.75rem;
+}
+
+.idea-block ol,
+.idea-block ul {
+    padding-left: 1.2rem;
+    display: grid;
+    gap: 0.5rem;
+}
+
+.idea-block p {
+    margin-bottom: 0.6rem;
+}
+
 .section-header {
     display: flex;
     justify-content: space-between;
@@ -1090,6 +1164,10 @@ body {
     }
     
     .summary-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .generator-layout {
         grid-template-columns: 1fr;
     }
     

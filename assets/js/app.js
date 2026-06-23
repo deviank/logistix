@@ -112,6 +112,12 @@ function initializeEventListeners() {
     if (companySearch && companyDropdown) {
         initCompanySearchableDropdown();
     }
+
+    // Game idea generator
+    const generateGameIdeaBtn = document.getElementById('generate-game-idea-btn');
+    if (generateGameIdeaBtn) {
+        generateGameIdeaBtn.addEventListener('click', generateGameIdea);
+    }
 }
 
 function initCompanySearchableDropdown() {
@@ -559,6 +565,74 @@ function createSampleData() {
     }
     
     showNotification('Sample data already exists in the database!', 'info');
+}
+
+function generateGameIdea() {
+    const button = document.getElementById('generate-game-idea-btn');
+    const originalText = button ? button.textContent : '';
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Generating...';
+    }
+
+    fetch('?page=ajax&action=generate_game_idea')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.idea) {
+                renderGameIdea(data.idea);
+                showNotification('Fresh game idea generated!', 'success');
+            } else {
+                showNotification('Unable to generate idea right now.', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error generating game idea:', error);
+            showNotification('Error generating game idea. Please try again.', 'error');
+        })
+        .finally(() => {
+            if (button) {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        });
+}
+
+function renderGameIdea(idea) {
+    const setText = (id, value) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value || '';
+        }
+    };
+
+    setText('idea-title', idea.title);
+    setText('idea-one-liner', idea.one_liner);
+    setText('idea-genre', idea.genre);
+    setText('idea-theme', idea.theme);
+    setText('idea-meta-system', idea.meta_system);
+    setText('idea-signature-system', idea.signature_system);
+
+    const coreLoopContainer = document.getElementById('idea-core-loop');
+    if (coreLoopContainer && Array.isArray(idea.core_loop)) {
+        coreLoopContainer.innerHTML = idea.core_loop
+            .map(step => `<li>${escapeHtml(step)}</li>`)
+            .join('');
+    }
+
+    const compulsionContainer = document.getElementById('idea-compulsion-elements');
+    if (compulsionContainer && idea.compulsion_elements) {
+        compulsionContainer.innerHTML = Object.entries(idea.compulsion_elements)
+            .map(([label, description]) => `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(description)}</p>`)
+            .join('');
+    }
+
+    const safeguardsContainer = document.getElementById('idea-retention-safeguards');
+    if (safeguardsContainer && Array.isArray(idea.retention_safeguards)) {
+        safeguardsContainer.innerHTML = idea.retention_safeguards
+            .map(item => `<li>${escapeHtml(item)}</li>`)
+            .join('');
+    }
 }
 
 function generateDummyCompanies() {
