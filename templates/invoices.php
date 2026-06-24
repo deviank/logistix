@@ -17,7 +17,6 @@
                 <a href="?page=loadsheets" class="nav-link">Load Sheets</a>
                 <a href="?page=invoices" class="nav-link active">Invoices</a>
                 <a href="?page=statements" class="nav-link">Statements</a>
-                <a href="?page=game_ideas" class="nav-link">Game Ideas</a>
             </nav>
         </header>
 
